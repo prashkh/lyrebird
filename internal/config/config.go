@@ -150,9 +150,23 @@ node_modules/
 
 # OS / editor cruft
 .DS_Store
-*.swp
+Thumbs.db
+desktop.ini
 .idea/
 .vscode/
+
+# Editor swap, backup, and atomic-save temps
+*.swp
+*.swo
+*.swn
+*~
+.#*
+\#*\#
+*.bak
+*.orig
+*.rej
+*.tmp
+*.tmp.*
 
 # Lyrebird itself
 .lyrebird/

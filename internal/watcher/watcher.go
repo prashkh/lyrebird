@@ -70,12 +70,52 @@ func (w *Watcher) shouldIgnore(path string) bool {
 			return true
 		}
 	}
-	// Editor swap/temp files.
-	base := filepath.Base(rel)
-	if strings.HasPrefix(base, ".#") || strings.HasSuffix(base, "~") || strings.HasSuffix(base, ".swp") {
+	if isTempArtifact(filepath.Base(rel)) {
 		return true
 	}
 	return false
+}
+
+// isTempArtifact reports whether a filename is an editor/OS-generated temp
+// or backup file we should never snapshot. Covers VS Code/Cursor atomic-write
+// temps (`foo.md.tmp.<pid>.<ts>`), vim swap/backup, emacs lockfiles, OS junk.
+func isTempArtifact(base string) bool {
+	if base == ".DS_Store" || base == "Thumbs.db" || base == "desktop.ini" {
+		return true
+	}
+	// vim/emacs and friends.
+	if strings.HasPrefix(base, ".#") || strings.HasPrefix(base, "#") && strings.HasSuffix(base, "#") {
+		return true
+	}
+	if strings.HasSuffix(base, "~") {
+		return true
+	}
+	for _, ext := range []string{".swp", ".swo", ".swn", ".bak", ".orig", ".rej", ".pyc", ".pyo", ".class"} {
+		if strings.HasSuffix(base, ext) {
+			return true
+		}
+	}
+	// Atomic-write temps: foo.md.tmp, foo.md.tmp.1234, foo.md.tmp.1234.5678
+	if strings.HasSuffix(base, ".tmp") {
+		return true
+	}
+	if i := strings.Index(base, ".tmp."); i >= 0 {
+		// Everything after .tmp. is digits/dots → probably a real temp file.
+		tail := base[i+len(".tmp."):]
+		if tail != "" && allDigitsOrDots(tail) {
+			return true
+		}
+	}
+	return false
+}
+
+func allDigitsOrDots(s string) bool {
+	for _, r := range s {
+		if (r < '0' || r > '9') && r != '.' {
+			return false
+		}
+	}
+	return true
 }
 
 // Run blocks until ctx is done (caller can stop via the watcher's underlying fsnotify Close).

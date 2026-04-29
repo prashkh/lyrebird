@@ -115,6 +115,96 @@ User hit `zsh: command not found: lyre` after the build. The binary was at
   with prebuilt binaries), the install line becomes
   `curl -fsSL https://lyrebird.dev/install.sh | sh`.
 
+### 2026-04-28 — UI overhaul: from git frontend to a story
+
+**Trigger**: User opened the UI in their `Lyrebird_test` folder and said
+"this UI is very opaque to an average user — lots of details but no summary
+of what happened." Screenshot showed:
+- `7d8621e 2026-04-28 22:28 [manual] view diff →`
+- Editor temp files (`notes.md.tmp.1860.1777429611772`) leaking through into
+  commit subjects.
+- A flat list with no narrative.
+
+**Diagnosis**: I'd built a git frontend dressed up. Words like *snapshot*,
+*hash*, *diff*, *manual* mean nothing to a non-developer. The page was an
+audit log, not a story.
+
+**Redesign**:
+
+1. **Vocabulary swap**: Removed all developer jargon from user-facing strings:
+   - "snapshot" → "change" / "save"
+   - "hash" → "id" (and de-emphasized to `dim small`)
+   - "diff" → "what changed in the files"
+   - "revert" → "undo"
+   - "restore" → "bring back this version"
+   - "session" → "conversation"
+   - "manual" → "You" (with ✋ avatar)
+   - "claude-code" → "Claude" (with 🤖 avatar)
+   - System events ([lyre]/[safety]/[restore]/[revert]) → "Lyrebird" actor (🐦)
+
+2. **Story view**: Replaced the flat list with a day-bucketed narrative:
+   - Day headers: "Today", "Yesterday", "Tuesday", "Apr 12"
+   - Each event reads as a sentence: "**You** edited hello.py and notes.md · 6 hours ago"
+   - Actor avatars + colors (warm for you, blue for Claude, gray for Lyrebird)
+   - Quiet system events ([lyre], [safety]) hide the file chips and "show what changed" link
+
+3. **Big actions front-and-center**:
+   - **↶ Undo** — rolls back the most recent non-system change (with confirm); auto-snapshots first so it's reversible.
+   - **＋ Save now** — manual save with optional note, in a `<details>` popover.
+   - **📦 Hand off** — primary action, package for another AI.
+
+4. **Friendly hero block** instead of toolbar:
+   - Folder name as h2
+   - One-line summary: "3 changes from Claude · 4 from you · across 2 conversations · last change 6 hours ago"
+   - File chips below as a quick visual inventory
+
+5. **Headline rendering**:
+   - Raw subject `[manual] hello.py notes.md` → "Edited hello.py and notes.md"
+   - Raw subject `[ai] claude-code sess_abc fib.py` → "Edited fib.py" (actor "Claude" added separately)
+   - Raw subject `[lyre] initial snapshot at lyre init` → "Started tracking this folder"
+   - Raw subject `[restore] notes.md from 02d5cf0` → "Brought notes.md back to an earlier version"
+   - Raw subject `[safety] before undo` → "Saved a checkpoint before undoing"
+
+6. **Filter Lyrebird-internal files** from the displayed file lists (e.g.
+   `.lyreignore`) so they don't appear as if they're user files.
+
+7. **Onboarding state**: Empty folder shows "Just started. Edit some files
+   to begin your story." plus a "Today" section with the welcome event.
+
+8. **Detail pages**: Snapshot detail and per-file pages got the same
+   vocabulary treatment. File page: "📄 hello.py · 2 versions of this file"
+   with a "CURRENT" badge on the latest, "Bring back this version" buttons
+   on prior ones.
+
+9. **Editor temp files**: Filtered `*.tmp.*`, `*~`, `.#*`, `.swp`, etc. from
+   both the watcher (so they don't trigger snapshots) and the UI display
+   (defense in depth — filter even if they slip into history).
+
+10. **Bug along the way**: Go template pipelines pass the piped value as the
+    LAST argument. `{{.X | truncate 100}}` calls `truncate(100, .X)`, not
+    `truncate(.X, 100)`. Got "expected string; found 100" until I flipped
+    the signature.
+
+**Result**: Side-by-side comparison of the same data:
+
+> Before:
+> `7d8621e 2026-04-28 22:28 [manual] · view diff →`
+> `[manual] notes.md notes.md.tmp.1860.1777429611772`
+
+> After:
+> ```
+> Lyrebird_test
+> 5 changes, all yours so far · last change 6 hours ago
+>   [↶ Undo]  [＋ Save now]  [📦 Hand off]
+> Files in this folder: hello.py · notes.md
+>
+> YESTERDAY
+>   ✋ You · Edited hello.py and notes.md · 6 hours ago
+>      hello.py  notes.md
+>      show what changed →
+>   🐦 Lyrebird · Started tracking this folder · 6 hours ago
+> ```
+
 ### Things deferred (write down so we don't forget)
 
 - Notebook stripping (jupytext sidecar). Currently `.ipynb` diffs are noisy.

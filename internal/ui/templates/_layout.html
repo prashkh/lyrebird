@@ -48,7 +48,62 @@ th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #efefef; 
 th { background: #f7f7f5; font-weight: 600; font-size: 12px; color: #555; }
 td.hash { font-family: ui-monospace, monospace; font-size: 12px; }
 a { color: #2a5fb4; }
-.flash { background: #e6f0ff; border: 1px solid #2a5fb4; padding: 12px 16px; border-radius: 4px; margin-bottom: 18px; font-size: 13px; }
+.flash { background: #fffbe6; border: 1px solid #e6c84a; padding: 10px 16px; border-radius: 6px; margin-bottom: 18px; font-size: 13px; color: #5a4400; }
+
+/* Hero block */
+.hero { display: flex; align-items: flex-start; gap: 24px; margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid #e5e5e5; }
+.hero-main { flex: 1; min-width: 0; }
+.hero h2 { margin: 0 0 6px; font-size: 26px; font-weight: 700; }
+.hero-sub { color: #666; font-size: 14px; line-height: 1.5; }
+.hero-sub .dim { color: #999; }
+.hero-actions { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
+.btn-primary { background: #2a5fb4; color: #fff; }
+.btn-ghost { background: #fff; color: #1a1a1a; border: 1px solid #d0d0d0; }
+.btn-ghost:hover { background: #f5f5f3; }
+details.snap-menu { display: inline-block; position: relative; }
+details.snap-menu > summary { list-style: none; cursor: pointer; padding: 8px 14px; border-radius: 4px; }
+details.snap-menu > summary::-webkit-details-marker { display: none; }
+details.snap-menu[open] .snap-form { display: flex; }
+.snap-form { display: none; position: absolute; right: 0; top: calc(100% + 4px); background: #fff; border: 1px solid #d0d0d0; padding: 10px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); gap: 6px; z-index: 5; min-width: 280px; }
+.snap-form input { flex: 1; padding: 6px 10px; border: 1px solid #d0d0d0; border-radius: 4px; font-size: 13px; font-family: inherit; }
+
+/* File chips row */
+.filelist-row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 10px 0 18px; }
+.file-chip { background: #efeee9; color: #1a1a1a; padding: 3px 8px; border-radius: 4px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; text-decoration: none; border: 1px solid transparent; }
+.file-chip:hover { background: #e0e9f5; color: #2a5fb4; border-color: #c8d8ee; }
+.dim { color: #999; }
+.small { font-size: 12px; }
+
+/* Story view */
+.story { padding-top: 4px; }
+.day { margin-bottom: 28px; }
+.day-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #888; padding: 0 0 10px 4px; border-bottom: 1px solid #efefef; margin-bottom: 12px; }
+.story-item { display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid #f5f5f5; }
+.story-item:last-child { border-bottom: none; }
+.story-actor .avatar { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: #f5f5f3; font-size: 16px; }
+.story-you .avatar { background: #fff5e1; }
+.story-ai .avatar { background: #e8f0ff; }
+.story-system .avatar { background: #f5f5f3; opacity: 0.6; }
+.story-body { flex: 1; min-width: 0; }
+.story-line { font-size: 15px; color: #1a1a1a; line-height: 1.45; }
+.actor-name { font-weight: 600; margin-right: 4px; }
+.story-you .actor-name { color: #b87a00; }
+.story-ai .actor-name { color: #2a5fb4; }
+.story-system .actor-name { color: #888; font-weight: 500; }
+.story-text { color: #1a1a1a; }
+.story-system .story-text { color: #888; }
+.when { color: #999; font-size: 13px; margin-left: 4px; }
+.prompt-line { display: block; margin-top: 6px; padding: 8px 12px; background: #f0f4fa; border-left: 3px solid #2a5fb4; border-radius: 0 4px 4px 0; text-decoration: none; color: #1a1a1a; font-size: 13px; line-height: 1.4; }
+.prompt-line .quote { color: #1a1a1a; }
+.prompt-line .prompt-cta { display: block; margin-top: 4px; color: #2a5fb4; font-size: 12px; }
+.prompt-line:hover { background: #e0e9f5; }
+.story-files { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px 6px; }
+.story-meta { margin-top: 8px; font-size: 12px; }
+.story-meta a { color: #888; text-decoration: none; }
+.story-meta a:hover { color: #2a5fb4; text-decoration: underline; }
+.empty h3 { margin-top: 0; color: #1a1a1a; }
+.empty code { background: #efeee9; padding: 2px 6px; border-radius: 3px; font-size: 13px; }
+@media (max-width: 720px) { .hero { flex-direction: column; } }
 </style>
 </head>
 <body>

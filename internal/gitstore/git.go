@@ -228,6 +228,21 @@ func (s *Store) HasCommits() bool {
 	return err == nil
 }
 
+// LsFiles returns the list of files tracked at HEAD (paths relative to repo root).
+func (s *Store) LsFiles() ([]string, error) {
+	out, err := s.run("ls-tree", "-r", "--name-only", "HEAD")
+	if err != nil {
+		return nil, err
+	}
+	var files []string
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if line != "" {
+			files = append(files, line)
+		}
+	}
+	return files, nil
+}
+
 // CurrentHead returns the current HEAD hash, or "" if no commits yet.
 func (s *Store) CurrentHead() string {
 	out, err := s.run("rev-parse", "HEAD")
