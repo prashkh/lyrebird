@@ -98,12 +98,24 @@ func (s *Server) projectMux() *http.ServeMux {
 	return mux
 }
 
+// reloadRegistry re-reads ~/.lyre/registry.json on every request so newly
+// registered folders show up without restarting the UI.
+func (s *Server) reloadRegistry() {
+	if s.registry == nil || s.registry.Path == "" {
+		return
+	}
+	if r, err := registry.Load(s.registry.Path); err == nil {
+		s.registry = r
+	}
+}
+
 // handleHome lists every tracked project as a card.
 func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
 	}
+	s.reloadRegistry()
 	cards := s.buildProjectCards()
 	s.render(w, "home.html", map[string]any{
 		"Title":    "Lyrebird",
@@ -116,6 +128,7 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 // to projectMux. Existing handlers run unmodified — they reference
 // s.repo/s.store/s.sess on whichever Server is the receiver.
 func (s *Server) handleProjectScoped(w http.ResponseWriter, r *http.Request) {
+	s.reloadRegistry()
 	rest := strings.TrimPrefix(r.URL.Path, "/p/")
 	id, sub, _ := strings.Cut(rest, "/")
 	if id == "" {

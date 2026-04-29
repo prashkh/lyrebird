@@ -20,6 +20,24 @@ func cmdInit(args []string) error {
 	if err != nil {
 		return err
 	}
+
+	// Idempotent: if already initialized, just refresh the registry entry
+	// and tell the user. Don't error out — this is the obvious thing to
+	// run after upgrading from a pre-v0.2.0 release where the registry
+	// didn't exist yet.
+	if existing, err := config.Open(cwd); err == nil {
+		if reg, err := registry.LoadDefault(); err == nil {
+			p, _ := reg.Register(existing.Config.FolderName, existing.Root)
+			_ = reg.Save()
+			fmt.Printf("Already tracking %s\n", existing.Root)
+			fmt.Printf("Registered as project %q (id: %s)\n", p.Name, p.ID)
+			fmt.Println("Run `lyre ui` to see all your tracked folders, or refresh the existing UI tab.")
+		} else {
+			fmt.Printf("Already tracking %s (registry unavailable: %v)\n", existing.Root, err)
+		}
+		return nil
+	}
+
 	cfg := config.Config{
 		Version:    1,
 		Created:    time.Now().UTC().Format(time.RFC3339),

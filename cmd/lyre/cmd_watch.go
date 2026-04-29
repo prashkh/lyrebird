@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/prashkh/lyrebird/internal/config"
+	"github.com/prashkh/lyrebird/internal/registry"
 	"github.com/prashkh/lyrebird/internal/watcher"
 )
 
@@ -18,6 +19,15 @@ func cmdWatch(args []string) error {
 	repo, err := config.Open(".")
 	if err != nil {
 		return err
+	}
+	// Make sure this folder is in the registry, so it shows up in
+	// `lyre ui` immediately. Idempotent for already-registered folders.
+	if reg, err := registry.LoadDefault(); err == nil {
+		if reg.ByRoot(repo.Root) == nil {
+			if _, err := reg.Register(repo.Config.FolderName, repo.Root); err == nil {
+				_ = reg.Save()
+			}
+		}
 	}
 	logger := log.New(os.Stdout, "[lyre.watch] ", log.LstdFlags)
 	w := watcher.New(repo, time.Duration(*debounceMs)*time.Millisecond, logger)
