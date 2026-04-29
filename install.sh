@@ -108,13 +108,66 @@ if [ "$os" = "darwin" ] && command -v xattr >/dev/null 2>&1; then
     xattr -d com.apple.quarantine "$DEST" 2>/dev/null || true
 fi
 
-# 5. Verify it's on PATH.
+# Detect a usable controlling terminal. Under `curl | sh`, stdin is the
+# script (not the user) but /dev/tty is usually still open. We probe by
+# trying to OPEN /dev/tty for read — if it fails, we fall back to
+# non-interactive defaults (yes to everything safe).
+HAVE_TTY=0
+if { : </dev/tty; } 2>/dev/null; then
+    HAVE_TTY=1
+fi
+
+ask() {
+    # Args: prompt — default-yes y/n question.
+    if [ "$HAVE_TTY" = "1" ]; then
+        printf "%s " "$1" >/dev/tty 2>/dev/null || true
+        ans=""
+        read -r ans </dev/tty 2>/dev/null || ans=""
+        case "${ans:-y}" in
+            n|N|no|NO) return 1 ;;
+            *) return 0 ;;
+        esac
+    fi
+    # Non-interactive: yes (so `curl | sh` Just Works for the safe defaults).
+    return 0
+}
+
+# 5. Verify it's on PATH; if not, offer to add it to the user's shell rc.
+add_to_path() {
+    # Pick the user's primary shell rc.
+    rc=""
+    sh_name="$(basename "${SHELL:-zsh}")"
+    case "$sh_name" in
+        zsh)  rc="$HOME/.zshrc" ;;
+        bash) rc="$HOME/.bashrc"; [ -f "$HOME/.bash_profile" ] && rc="$HOME/.bash_profile" ;;
+        *)    rc="$HOME/.profile" ;;
+    esac
+    line="export PATH=\"$DEST_DIR:\$PATH\""
+    # Already there?
+    if [ -f "$rc" ] && grep -F "$DEST_DIR" "$rc" >/dev/null 2>&1; then
+        ok "$DEST_DIR already referenced in $rc — open a new terminal to pick it up."
+        return
+    fi
+    {
+        printf '\n# Added by Lyrebird installer (%s)\n' "$(date +%Y-%m-%d)"
+        printf '%s\n' "$line"
+    } >> "$rc"
+    ok "Added $DEST_DIR to your \$PATH via $rc"
+    info "Open a new terminal — or run: ${BOLD}export PATH=\"$DEST_DIR:\$PATH\"${RESET}"
+}
+
 case ":$PATH:" in
-    *":$DEST_DIR:"*) ok "$DEST_DIR is on \$PATH" ;;
+    *":$DEST_DIR:"*)
+        ok "$DEST_DIR is on \$PATH"
+        ;;
     *)
-        warn "$DEST_DIR is NOT on your \$PATH."
-        warn "Add this line to your ~/.zshrc (or ~/.bashrc):"
-        printf '    export PATH="%s:$PATH"\n' "$DEST_DIR"
+        warn "$DEST_DIR is not yet on your \$PATH."
+        if ask "Add it automatically (recommended)? [Y/n]"; then
+            add_to_path
+        else
+            info "Skipped. Add this line to your shell config yourself:"
+            printf '    export PATH="%s:$PATH"\n' "$DEST_DIR"
+        fi
         ;;
 esac
 
@@ -122,14 +175,14 @@ esac
 INSTALLED_VERSION=$("$DEST" version 2>/dev/null || echo "(could not run lyre — see above)")
 ok "$INSTALLED_VERSION"
 
-# 7. Offer to install the Claude Code hook (only if interactive).
-if [ -t 0 ] && [ -d "$HOME/.claude" ]; then
-    printf "\nInstall Claude Code PostToolUse hook now? (captures chat threads alongside file changes) [Y/n] "
-    read -r ans
-    case "${ans:-y}" in
-        n|N|no|NO) info "Skipped. Run \`lyre install-hook\` later if you want it." ;;
-        *) "$DEST" install-hook ;;
-    esac
+# 7. Offer to install the Claude Code hook.
+if [ -d "$HOME/.claude" ]; then
+    if ask "
+Install Claude Code PostToolUse hook now? (captures chat threads alongside file changes) [Y/n]"; then
+        "$DEST" install-hook
+    else
+        info "Skipped. Run \`lyre install-hook\` later if you want it."
+    fi
 fi
 
 cat <<EOF
