@@ -1,0 +1,69 @@
+{{define "layout"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{.Title}} — Lyrebird</title>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; background: #f7f7f5; color: #1a1a1a; }
+header { background: #1a1a1a; color: #f7f7f5; padding: 12px 24px; display: flex; align-items: center; gap: 24px; border-bottom: 1px solid #333; }
+header h1 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: 0.02em; }
+header nav a { color: #aaa; text-decoration: none; margin-right: 16px; font-size: 14px; }
+header nav a:hover { color: #fff; }
+header form { margin-left: auto; }
+header input[type=search] { background: #2a2a2a; color: #f7f7f5; border: 1px solid #444; border-radius: 4px; padding: 6px 10px; font-size: 13px; width: 220px; }
+header input[type=search]::placeholder { color: #888; }
+main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+.subtitle { color: #888; font-size: 13px; margin-bottom: 24px; }
+.event { background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 14px 18px; margin-bottom: 10px; }
+.event .meta { display: flex; gap: 12px; align-items: center; font-size: 12px; color: #666; margin-bottom: 6px; }
+.event .meta .hash { font-family: ui-monospace, "SF Mono", Menlo, monospace; background: #efeee9; padding: 1px 6px; border-radius: 3px; }
+.event .meta .badge { background: #2a5fb4; color: #fff; padding: 1px 6px; border-radius: 3px; font-size: 11px; }
+.event .meta .badge.manual { background: #888; }
+.event .subject { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+.event .files { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; color: #555; margin-bottom: 6px; }
+.event .prompt { color: #1a1a1a; font-size: 13px; line-height: 1.4; padding: 8px 10px; background: #f0f4fa; border-left: 3px solid #2a5fb4; border-radius: 0 4px 4px 0; }
+.event .prompt em { color: #888; font-style: normal; }
+.event a.show-link { font-size: 12px; color: #2a5fb4; text-decoration: none; }
+.event a.show-link:hover { text-decoration: underline; }
+.btn { display: inline-block; background: #2a5fb4; color: #fff; padding: 8px 14px; border-radius: 4px; text-decoration: none; font-size: 13px; border: none; cursor: pointer; font-family: inherit; }
+.btn:hover { background: #224d96; }
+.btn.secondary { background: #fff; color: #2a5fb4; border: 1px solid #2a5fb4; }
+.btn.secondary:hover { background: #f0f4fa; }
+.toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 18px; }
+pre { background: #1a1a1a; color: #f0f0f0; padding: 14px; border-radius: 4px; overflow-x: auto; font-size: 12px; line-height: 1.5; }
+pre.diff { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+pre.diff .add { color: #7ec07e; }
+pre.diff .del { color: #e07e7e; }
+.transcript { background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 18px; margin-bottom: 18px; }
+.transcript .turn { padding: 12px 0; border-bottom: 1px solid #efefef; }
+.transcript .turn:last-child { border-bottom: none; }
+.transcript .role { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; letter-spacing: 0.05em; margin-bottom: 6px; }
+.transcript .role.assistant { color: #2a5fb4; }
+.transcript .text { white-space: pre-wrap; font-size: 14px; line-height: 1.5; }
+.transcript .turn-meta { font-size: 11px; color: #999; margin-top: 6px; font-family: ui-monospace, monospace; }
+.empty { color: #999; padding: 40px; text-align: center; background: #fff; border: 1px dashed #ccc; border-radius: 6px; }
+table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; overflow: hidden; }
+th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #efefef; font-size: 13px; }
+th { background: #f7f7f5; font-weight: 600; font-size: 12px; color: #555; }
+td.hash { font-family: ui-monospace, monospace; font-size: 12px; }
+a { color: #2a5fb4; }
+.flash { background: #e6f0ff; border: 1px solid #2a5fb4; padding: 12px 16px; border-radius: 4px; margin-bottom: 18px; font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🐦 Lyrebird</h1>
+  <nav>
+    <a href="/">Timeline</a>
+    <a href="/sessions">Sessions</a>
+  </nav>
+  <form action="/search" method="get">
+    <input type="search" name="q" placeholder="Search chats and files..." value="{{.Query}}">
+  </form>
+</header>
+<main>
+{{template "content" .}}
+</main>
+</body>
+</html>{{end}}

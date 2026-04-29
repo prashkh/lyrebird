@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "lyre-ui-sandbox",
+      "runtimeExecutable": "/Users/prash_flexcompute/Documents/LocalRepos/lyrebird/bin/lyre",
+      "runtimeArgs": ["ui", "-p", "6789", "--no-open"],
+      "port": 6789,
+      "cwd": "/tmp/lyre-hook-test"
+    }
+  ]
+}

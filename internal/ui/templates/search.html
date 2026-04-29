@@ -1,0 +1,21 @@
+{{define "content"}}
+<h2 style="margin-top:0;">Search results for "{{.Query}}"</h2>
+<div class="subtitle">{{len .Results}} matches</div>
+
+{{if not .Results}}
+  <div class="empty">No matches for "{{.Query}}".</div>
+{{else}}
+{{range .Results}}
+<div class="event">
+  <div class="meta">
+    <span class="badge {{if not .IsAI}}manual{{end}}">{{if .IsAI}}{{.Agent}}{{else}}manual{{end}}</span>
+    <span class="hash">{{.ShortHash}}</span>
+    <span>{{.Date}}</span>
+    <a class="show-link" href="/show/{{.Hash}}">view →</a>
+  </div>
+  <div class="subject">{{.Subject}}</div>
+  <div class="prompt">{{.Highlight}}</div>
+</div>
+{{end}}
+{{end}}
+{{end}}

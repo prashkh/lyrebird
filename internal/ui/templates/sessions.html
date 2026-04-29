@@ -1,0 +1,23 @@
+{{define "content"}}
+<h2 style="margin-top:0;">Sessions</h2>
+<div class="subtitle">{{len .Sessions}} sessions captured</div>
+
+{{if not .Sessions}}
+  <div class="empty">No sessions yet. Run <code>lyre install-hook</code> to capture Claude Code chats.</div>
+{{else}}
+<table>
+  <thead><tr><th>Updated</th><th>Agent</th><th>ID</th><th>Turns</th><th>First prompt</th></tr></thead>
+  <tbody>
+  {{range .Sessions}}
+  <tr>
+    <td>{{.UpdatedAt.Format "2006-01-02 15:04"}}</td>
+    <td>{{.Agent}}</td>
+    <td class="hash"><a href="/sessions/{{.SessionID}}">{{shortID .SessionID}}</a></td>
+    <td>{{len .Turns}}</td>
+    <td>{{.PromptSummary | truncate 100}}</td>
+  </tr>
+  {{end}}
+  </tbody>
+</table>
+{{end}}
+{{end}}

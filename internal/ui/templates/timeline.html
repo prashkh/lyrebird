@@ -1,0 +1,30 @@
+{{define "content"}}
+<div class="toolbar">
+  <h2 style="margin:0;font-size:20px;">Timeline</h2>
+  <span class="subtitle" style="margin-bottom:0;margin-left:12px;">{{.Repo.Root}}</span>
+  <span style="flex:1;"></span>
+  <form method="post" action="/handoff" style="display:inline;">
+    <button class="btn" type="submit">📦 Generate Handoff</button>
+  </form>
+</div>
+
+{{if .Flash}}<div class="flash">{{.Flash}}</div>{{end}}
+
+{{if not .Events}}
+  <div class="empty">No snapshots yet. Run <code>lyre snapshot -m "first"</code> or start <code>lyre watch</code>.</div>
+{{else}}
+  {{range .Events}}
+  <div class="event">
+    <div class="meta">
+      <span class="hash">{{.ShortHash}}</span>
+      <span>{{.Date}}</span>
+      {{if .IsAI}}<span class="badge">{{.Agent}}</span>{{else}}<span class="badge manual">manual</span>{{end}}
+      <a class="show-link" href="/show/{{.Hash}}">view diff →</a>
+    </div>
+    <div class="subject">{{.Subject}}</div>
+    {{if .Files}}<div class="files">📄 {{range $i, $f := .Files}}{{if $i}}, {{end}}<a href="/file?path={{$f}}">{{$f}}</a>{{end}}</div>{{end}}
+    {{if .UserPrompt}}<div class="prompt"><em>prompt:</em> {{.UserPrompt}}{{if .SessionID}} · <a href="/sessions/{{.SessionID}}">full session →</a>{{end}}</div>{{end}}
+  </div>
+  {{end}}
+{{end}}
+{{end}}

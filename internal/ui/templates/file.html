@@ -1,0 +1,26 @@
+{{define "content"}}
+<a href="/" style="font-size:13px;">← Timeline</a>
+<h2 style="margin-top:8px;font-family:ui-monospace,monospace;">{{.Path}}</h2>
+<div class="subtitle">{{len .Versions}} versions</div>
+
+{{if not .Versions}}
+  <div class="empty">No history for this file.</div>
+{{else}}
+{{range .Versions}}
+<div class="event">
+  <div class="meta">
+    <span class="hash">{{.ShortHash}}</span>
+    <span>{{.Date}}</span>
+    <a class="show-link" href="/show/{{.Hash}}">view diff →</a>
+    <form method="post" action="/restore" style="margin-left:auto;">
+      <input type="hidden" name="path" value="{{$.Path}}">
+      <input type="hidden" name="hash" value="{{.Hash}}">
+      <button class="btn secondary" type="submit" onclick="return confirm('Restore {{$.Path}} to {{.ShortHash}}? Current state will be auto-snapshotted first.')">Restore this version</button>
+    </form>
+  </div>
+  <div class="subject">{{.Subject}}</div>
+  {{if .UserPrompt}}<div class="prompt"><em>prompt:</em> {{.UserPrompt}}</div>{{end}}
+</div>
+{{end}}
+{{end}}
+{{end}}

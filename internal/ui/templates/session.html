@@ -1,0 +1,25 @@
+{{define "content"}}
+<a href="/" style="font-size:13px;">← Timeline</a>
+<h2 style="margin-top:8px;">Session {{.Session.SessionID}}</h2>
+<div class="subtitle">{{.Session.Agent}} · {{len .Session.Turns}} turns · started {{.Session.StartedAt.Format "2006-01-02 15:04:05"}}</div>
+
+<div class="transcript">
+{{range $i, $t := .Session.Turns}}
+<div class="turn">
+  {{if $t.UserPrompt}}
+    <div class="role">User</div>
+    <div class="text">{{$t.UserPrompt}}</div>
+  {{end}}
+  {{if $t.AssistantText}}
+    <div class="role assistant" style="margin-top:10px;">Assistant</div>
+    <div class="text">{{$t.AssistantText}}</div>
+  {{end}}
+  <div class="turn-meta">
+    Turn {{add $i 1}} · {{$t.Timestamp.Format "15:04:05"}} · tool={{$t.Tool}}
+    {{if $t.SnapshotHash}} · <a href="/show/{{$t.SnapshotHash}}">snapshot {{shortHash $t.SnapshotHash}}</a>{{end}}
+    {{if $t.FilesChanged}} · files: {{range $j, $f := $t.FilesChanged}}{{if $j}}, {{end}}<a href="/file?path={{$f}}">{{$f}}</a>{{end}}{{end}}
+  </div>
+</div>
+{{end}}
+</div>
+{{end}}

@@ -1,0 +1,12 @@
+{{define "content"}}
+<a href="/" style="font-size:13px;">← Timeline</a>
+<h2 style="margin-top:8px;">Handoff package generated</h2>
+
+<div class="flash">
+  <strong>Location:</strong> <code>{{.Path}}</code><br>
+  <span style="font-size:12px;color:#666;">Copy this folder (or zip it) to share with another AI agent or teammate.</span>
+</div>
+
+<h3 style="font-size:15px;margin-top:24px;">HANDOFF.md preview</h3>
+<pre class="diff" style="white-space:pre-wrap;">{{.HandoffMD}}</pre>
+{{end}}

@@ -1,0 +1,19 @@
+{{define "content"}}
+<a href="/" style="font-size:13px;">← Timeline</a>
+<h2 style="margin-top:8px;">Snapshot {{shortHash .Hash}}</h2>
+<div class="subtitle">{{.Date}} · {{.Subject}}</div>
+
+{{if .Turn}}
+<div class="event" style="margin-bottom:18px;">
+  <div class="meta">
+    <span class="badge">{{.Session.Agent}}</span>
+    <a class="show-link" href="/sessions/{{.Session.SessionID}}">full session →</a>
+  </div>
+  {{if .Turn.UserPrompt}}<div class="prompt"><em>prompt:</em> {{.Turn.UserPrompt}}</div>{{end}}
+  {{if .Turn.AssistantText}}<div class="prompt" style="background:#f0fbf2;border-left-color:#3a8b54;margin-top:8px;"><em>assistant:</em> {{.Turn.AssistantText}}</div>{{end}}
+</div>
+{{end}}
+
+<h3 style="margin-top:24px;font-size:15px;">Diff</h3>
+<pre class="diff">{{.Diff}}</pre>
+{{end}}
