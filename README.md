@@ -17,21 +17,30 @@ it there?" becomes a one-command answer.
 
 See [PROBLEM.md](./PROBLEM.md) for the motivating examples.
 
+## Install
+
+Requires Go 1.21+ (install via `brew install go` if needed). Repo is private —
+use `gh` to clone:
+
+```bash
+gh repo clone prashkh/lyrebird /tmp/lyrebird && /tmp/lyrebird/install.sh
+```
+
+That's it. The installer:
+1. Builds the `lyre` binary
+2. Drops it in the first writable directory on your `$PATH` (prefers
+   `~/.local/bin`, then `/opt/homebrew/bin`, then `/usr/local/bin`)
+3. Optionally registers the Claude Code `PostToolUse` hook in
+   `~/.claude/settings.json`
+
+Once installed, `lyre` is available in any folder.
+
 ## Quick start
 
 ```bash
-# Build from source (eventually: curl -fsSL https://lyrebird.dev/install.sh | sh)
-git clone https://github.com/prashkh/lyrebird
-cd lyrebird
-go build -o bin/lyre ./cmd/lyre
-sudo cp bin/lyre /usr/local/bin/
-
-# Initialize tracking in a folder
+# Initialize tracking in any folder
 cd ~/myproject
 lyre init
-
-# Capture chat threads from Claude Code sessions
-lyre install-hook            # one-time: patches ~/.claude/settings.json
 
 # Start the watcher in another terminal (snapshots every change)
 lyre watch &

@@ -93,6 +93,28 @@ Every piece works as designed. The handoff `timeline.json` correctly attributes
 each AI snapshot to a `(session_id, turn_id, user_prompt)` tuple while leaving
 manual snapshots untagged.
 
+### 2026-04-28 — install.sh follow-up
+
+User hit `zsh: command not found: lyre` after the build. The binary was at
+`bin/lyre` inside the repo, but never copied to anywhere on `$PATH`.
+
+**Fix**:
+- Copied the existing binary to `/opt/homebrew/bin/lyre` for the immediate fix.
+- Wrote `install.sh` for the proper one-command UX going forward. It:
+  1. Picks the first writable directory on `$PATH` (`~/.local/bin` →
+     `/opt/homebrew/bin` → `/usr/local/bin`), honors `$LYRE_INSTALL_DIR`.
+  2. Builds with `go build -ldflags '-s -w'` (smaller binary).
+  3. Verifies the install dir is on `$PATH`; warns with the exact zshrc line
+     if not.
+  4. Offers to register the Claude Code PostToolUse hook (auto-yes if stdin
+     isn't a TTY, e.g. piped from curl).
+- README updated with the actual one-command install:
+  `gh repo clone prashkh/lyrebird /tmp/lyrebird && /tmp/lyrebird/install.sh`
+- Note: while the repo is private, plain `curl | sh` won't work without
+  authentication. Once we cut a public release (or set up GitHub releases
+  with prebuilt binaries), the install line becomes
+  `curl -fsSL https://lyrebird.dev/install.sh | sh`.
+
 ### Things deferred (write down so we don't forget)
 
 - Notebook stripping (jupytext sidecar). Currently `.ipynb` diffs are noisy.
