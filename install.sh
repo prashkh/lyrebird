@@ -1,93 +1,116 @@
-#!/usr/bin/env bash
-# Lyrebird installer.
+#!/bin/sh
+# Lyrebird installer — downloads a prebuilt binary and drops it on $PATH.
 #
-# Usage:
-#   ./install.sh                         (when run from inside a cloned repo)
-#   curl -fsSL <url>/install.sh | sh     (eventually, once we have releases)
+# Run:
+#   curl -fsSL https://raw.githubusercontent.com/prashkh/lyrebird/main/install.sh | sh
 #
-# What it does:
-#   1. Picks a writable directory on your $PATH (~/.local/bin, /opt/homebrew/bin,
-#      or /usr/local/bin — whichever exists, is on PATH, and is writable).
-#   2. Builds the `lyre` binary (requires Go 1.21+).
-#   3. Copies it into the chosen install dir.
-#   4. Optionally registers the Claude Code PostToolUse hook.
+# What this script does:
+#   1. Detects your OS and CPU.
+#   2. Downloads the matching `lyre` binary from the latest GitHub release.
+#   3. Drops it in the first writable directory on your $PATH (preferring
+#      ~/.local/bin, then /opt/homebrew/bin, then /usr/local/bin).
+#   4. Optionally registers Lyrebird's Claude Code hook in
+#      ~/.claude/settings.json (so chat threads are captured automatically).
 #
-# Reads no arguments; honors $LYRE_INSTALL_DIR to force a destination.
+# Honors LYRE_INSTALL_DIR if you want to force a destination.
 
-set -euo pipefail
+set -eu
 
-YELLOW=$'\033[33m'
-GREEN=$'\033[32m'
-RED=$'\033[31m'
-DIM=$'\033[2m'
-RESET=$'\033[0m'
+REPO="prashkh/lyrebird"
+RELEASE_URL_BASE="https://github.com/${REPO}/releases/latest/download"
+
+# Pretty output (only if stdout is a tty).
+if [ -t 1 ]; then
+    YELLOW=$(printf '\033[33m')
+    GREEN=$(printf '\033[32m')
+    RED=$(printf '\033[31m')
+    DIM=$(printf '\033[2m')
+    BOLD=$(printf '\033[1m')
+    RESET=$(printf '\033[0m')
+else
+    YELLOW=""; GREEN=""; RED=""; DIM=""; BOLD=""; RESET=""
+fi
 
 info()  { printf "%s\n" "${DIM}$*${RESET}"; }
-ok()    { printf "%s\n" "${GREEN}✓${RESET} $*"; }
+ok()    { printf "%s\n" "${GREEN}\xe2\x9c\x93${RESET} $*"; }
 warn()  { printf "%s\n" "${YELLOW}!${RESET} $*"; }
-fail()  { printf "%s\n" "${RED}✗${RESET} $*" >&2; exit 1; }
+fail()  { printf "%s\n" "${RED}\xe2\x9c\x97${RESET} $*" >&2; exit 1; }
 
-# 1. Sanity: are we in the right place?
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
-cd "$SCRIPT_DIR"
-[ -f cmd/lyre/main.go ] || fail "install.sh must be run from a Lyrebird source checkout (cmd/lyre/main.go not found here)."
+# 1. Detect platform.
+os=$(uname -s | tr '[:upper:]' '[:lower:]')
+arch=$(uname -m)
+case "$arch" in
+    arm64|aarch64) arch=arm64 ;;
+    x86_64|amd64)  arch=amd64 ;;
+    *) fail "Unsupported CPU architecture: $arch" ;;
+esac
 
-# 2. Need Go.
-if ! command -v go >/dev/null 2>&1; then
-    if [ -x /opt/homebrew/bin/go ]; then
-        export PATH="/opt/homebrew/bin:$PATH"
-    elif [ -x /usr/local/go/bin/go ]; then
-        export PATH="/usr/local/go/bin:$PATH"
-    else
-        fail "Go is required (1.21+). Install via:  brew install go   or   https://go.dev/dl/"
-    fi
-fi
-GO_VERSION=$(go version | awk '{print $3}')
-info "Using $(go version)"
+case "$os" in
+    darwin) ;;
+    linux)  fail "Linux support is coming soon. For now, run install-from-source.sh inside a clone of the repo (requires Go)." ;;
+    *)      fail "Unsupported OS: $os. Lyrebird currently runs on macOS only." ;;
+esac
 
-# 3. Pick install dir.
+ASSET="lyre-${os}-${arch}"
+DOWNLOAD_URL="${RELEASE_URL_BASE}/${ASSET}"
+info "Detected: ${BOLD}${os}/${arch}${RESET}"
+
+# 2. Pick install dir.
 pick_dir() {
     if [ -n "${LYRE_INSTALL_DIR:-}" ]; then
-        echo "$LYRE_INSTALL_DIR"
+        printf '%s' "$LYRE_INSTALL_DIR"
         return
     fi
-    # Prefer ~/.local/bin if it's on PATH and writable (no sudo).
     case ":$PATH:" in
         *":$HOME/.local/bin:"*)
             mkdir -p "$HOME/.local/bin"
             if [ -w "$HOME/.local/bin" ]; then
-                echo "$HOME/.local/bin"
-                return
+                printf '%s' "$HOME/.local/bin"; return
             fi
             ;;
     esac
-    # Apple Silicon Homebrew prefix.
     if [ -d /opt/homebrew/bin ] && [ -w /opt/homebrew/bin ]; then
-        case ":$PATH:" in *":/opt/homebrew/bin:"*) echo /opt/homebrew/bin; return ;; esac
+        case ":$PATH:" in *":/opt/homebrew/bin:"*) printf '%s' /opt/homebrew/bin; return ;; esac
     fi
-    # Intel/Linux Homebrew or system.
     if [ -d /usr/local/bin ] && [ -w /usr/local/bin ]; then
-        case ":$PATH:" in *":/usr/local/bin:"*) echo /usr/local/bin; return ;; esac
+        case ":$PATH:" in *":/usr/local/bin:"*) printf '%s' /usr/local/bin; return ;; esac
     fi
-    # Fallback: ~/.local/bin even if not on PATH; we'll warn the user.
     mkdir -p "$HOME/.local/bin"
-    echo "$HOME/.local/bin"
+    printf '%s' "$HOME/.local/bin"
 }
 
 DEST_DIR=$(pick_dir)
 DEST="$DEST_DIR/lyre"
-info "Installing to $DEST"
+info "Installing to ${BOLD}$DEST${RESET}"
 
-# 4. Build.
-info "Building..."
-go build -ldflags "-s -w" -o "$DEST" ./cmd/lyre
-ok "Built lyre"
+# 3. Download via curl (or wget as fallback).
+TMP=$(mktemp -t lyre.XXXXXX)
+trap 'rm -f "$TMP"' EXIT INT TERM
+if command -v curl >/dev/null 2>&1; then
+    info "Downloading $DOWNLOAD_URL"
+    curl -fsSL --retry 2 -o "$TMP" "$DOWNLOAD_URL" || fail "Download failed."
+elif command -v wget >/dev/null 2>&1; then
+    info "Downloading $DOWNLOAD_URL"
+    wget -q -O "$TMP" "$DOWNLOAD_URL" || fail "Download failed."
+else
+    fail "Need either curl or wget on \$PATH to download the binary."
+fi
+
+# 4. Install.
+chmod +x "$TMP"
+mv "$TMP" "$DEST"
+trap - EXIT INT TERM
+ok "Installed lyre"
+
+# macOS sometimes quarantines downloaded binaries. Strip the attribute so
+# the binary doesn't trigger Gatekeeper on first run.
+if [ "$os" = "darwin" ] && command -v xattr >/dev/null 2>&1; then
+    xattr -d com.apple.quarantine "$DEST" 2>/dev/null || true
+fi
 
 # 5. Verify it's on PATH.
 case ":$PATH:" in
-    *":$DEST_DIR:"*)
-        ok "$DEST_DIR is on \$PATH"
-        ;;
+    *":$DEST_DIR:"*) ok "$DEST_DIR is on \$PATH" ;;
     *)
         warn "$DEST_DIR is NOT on your \$PATH."
         warn "Add this line to your ~/.zshrc (or ~/.bashrc):"
@@ -96,17 +119,13 @@ case ":$PATH:" in
 esac
 
 # 6. Smoke test.
-INSTALLED_VERSION=$("$DEST" version 2>/dev/null || true)
-ok "Installed: $INSTALLED_VERSION"
+INSTALLED_VERSION=$("$DEST" version 2>/dev/null || echo "(could not run lyre — see above)")
+ok "$INSTALLED_VERSION"
 
-# 7. Offer to install the Claude Code hook.
-if [ -d "$HOME/.claude" ]; then
-    if [ -t 0 ]; then
-        printf "\nInstall Claude Code PostToolUse hook now? [Y/n] "
-        read -r ans
-    else
-        ans="y"  # non-interactive: opt-in by default
-    fi
+# 7. Offer to install the Claude Code hook (only if interactive).
+if [ -t 0 ] && [ -d "$HOME/.claude" ]; then
+    printf "\nInstall Claude Code PostToolUse hook now? (captures chat threads alongside file changes) [Y/n] "
+    read -r ans
     case "${ans:-y}" in
         n|N|no|NO) info "Skipped. Run \`lyre install-hook\` later if you want it." ;;
         *) "$DEST" install-hook ;;
@@ -115,7 +134,7 @@ fi
 
 cat <<EOF
 
-${GREEN}Lyrebird is installed.${RESET}
+${GREEN}${BOLD}Lyrebird is installed.${RESET}
 
 Next steps:
   cd ~/your-project
@@ -123,5 +142,5 @@ Next steps:
   lyre watch &               # auto-snapshot on every change
   lyre ui                    # open the timeline at http://localhost:6789
 
-Documentation: https://github.com/prashkh/lyrebird
+Documentation: https://github.com/${REPO}
 EOF
