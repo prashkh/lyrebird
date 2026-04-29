@@ -19,21 +19,29 @@ See [PROBLEM.md](./PROBLEM.md) for the motivating examples.
 
 ## Install
 
-Requires Go 1.21+ (install via `brew install go` if needed). Repo is private —
-use `gh` to clone:
+**macOS** (Apple Silicon or Intel):
 
 ```bash
-gh repo clone prashkh/lyrebird /tmp/lyrebird && /tmp/lyrebird/install.sh
+curl -fsSL https://raw.githubusercontent.com/prashkh/lyrebird/main/install.sh | sh
 ```
 
 That's it. The installer:
-1. Builds the `lyre` binary
-2. Drops it in the first writable directory on your `$PATH` (prefers
-   `~/.local/bin`, then `/opt/homebrew/bin`, then `/usr/local/bin`)
+1. Detects your CPU and downloads the right `lyre` binary from the latest
+   GitHub release (no Go, no source clone, no compile).
+2. Drops it in the first writable directory on your `$PATH` — preferring
+   `~/.local/bin`, then `/opt/homebrew/bin`, then `/usr/local/bin`.
 3. Optionally registers the Claude Code `PostToolUse` hook in
-   `~/.claude/settings.json`
+   `~/.claude/settings.json` so chat threads are captured automatically.
 
-Once installed, `lyre` is available in any folder.
+Once installed, `lyre` is available in any folder. Linux & Windows
+support are coming.
+
+**Build from source** (developers, or if the prebuilt binary doesn't work
+for your platform):
+
+```bash
+git clone https://github.com/prashkh/lyrebird && cd lyrebird && ./install-from-source.sh
+```
 
 ## Quick start
 

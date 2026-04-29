@@ -32,9 +32,9 @@ else
 fi
 
 info()  { printf "%s\n" "${DIM}$*${RESET}"; }
-ok()    { printf "%s\n" "${GREEN}\xe2\x9c\x93${RESET} $*"; }
+ok()    { printf "%s\n" "${GREEN}✓${RESET} $*"; }
 warn()  { printf "%s\n" "${YELLOW}!${RESET} $*"; }
-fail()  { printf "%s\n" "${RED}\xe2\x9c\x97${RESET} $*" >&2; exit 1; }
+fail()  { printf "%s\n" "${RED}✗${RESET} $*" >&2; exit 1; }
 
 # 1. Detect platform.
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
