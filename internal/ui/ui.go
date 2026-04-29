@@ -636,7 +636,9 @@ func (s *Server) handleShow(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	diff, _ := s.store.Show(match.Hash)
+	patch, _ := s.store.ShowPatch(match.Hash)
+	stat, _ := s.store.ShowStat(match.Hash)
+	groups := parseDiff(patch)
 	sess, turn, _ := s.sess.FindByCommit(match.Hash)
 
 	// Build a small eventVM-like view so we can re-use actor + headline logic.
@@ -665,17 +667,91 @@ func (s *Server) handleShow(w http.ResponseWriter, r *http.Request) {
 		date = humanizeAgo(t) + " (" + t.Format("Jan 2 · 3:04 pm") + ")"
 	}
 	s.render(w, "show.html", map[string]any{
-		"Title":     "What changed",
-		"Hash":      match.Hash,
-		"ShortHash": match.ShortHash,
-		"Date":      date,
-		"Subject":   match.Subject,
-		"Headline":  headline,
-		"Actor":     ev.Actor,
-		"Diff":      diff,
-		"Session":   sess,
-		"Turn":      turn,
+		"Title":      "What changed",
+		"Hash":       match.Hash,
+		"ShortHash":  match.ShortHash,
+		"Date":       date,
+		"Subject":    match.Subject,
+		"Headline":   headline,
+		"Actor":      ev.Actor,
+		"DiffGroups": groups,
+		"DiffStat":   strings.TrimSpace(stat),
+		"Session":    sess,
+		"Turn":       turn,
 	})
+}
+
+// DiffLine is one line of a parsed unified diff with a class hint.
+type DiffLine struct {
+	Class string // "add", "del", "hunk", "context"
+	Text  string
+}
+
+// DiffFile groups diff lines by file. The "Header" is the human-readable
+// path (e.g. "fib.py") plus an indicator (new file, deleted file, renamed).
+type DiffFile struct {
+	Path  string
+	Note  string     // "new file", "deleted file", "renamed", or ""
+	Lines []DiffLine
+}
+
+// parseDiff splits a unified diff (patch only — no commit header) into per-file
+// groups with classified lines. Lines starting with `diff --git`/`index`/`+++ b/`
+// `--- a/` get folded into the file header; `@@` becomes a hunk separator.
+func parseDiff(patch string) []DiffFile {
+	var out []DiffFile
+	var cur *DiffFile
+	flush := func() {
+		if cur != nil {
+			out = append(out, *cur)
+			cur = nil
+		}
+	}
+	for _, line := range strings.Split(patch, "\n") {
+		switch {
+		case strings.HasPrefix(line, "diff --git "):
+			flush()
+			// "diff --git a/foo b/foo" → "foo"
+			parts := strings.Fields(line)
+			path := ""
+			if len(parts) >= 4 {
+				p := parts[3] // "b/foo"
+				path = strings.TrimPrefix(p, "b/")
+			}
+			cur = &DiffFile{Path: path}
+		case cur != nil && strings.HasPrefix(line, "new file"):
+			cur.Note = "new file"
+		case cur != nil && strings.HasPrefix(line, "deleted file"):
+			cur.Note = "deleted file"
+		case cur != nil && strings.HasPrefix(line, "rename "):
+			cur.Note = "renamed"
+		case cur != nil && (strings.HasPrefix(line, "index ") ||
+			strings.HasPrefix(line, "--- ") ||
+			strings.HasPrefix(line, "+++ ") ||
+			strings.HasPrefix(line, "old mode") ||
+			strings.HasPrefix(line, "new mode") ||
+			strings.HasPrefix(line, "similarity ") ||
+			strings.HasPrefix(line, "Binary files ")):
+			// File-level metadata — skip in the per-file render. We already show Path/Note.
+			if strings.HasPrefix(line, "Binary files ") && cur != nil {
+				cur.Note = "binary"
+			}
+		case cur != nil && strings.HasPrefix(line, "@@"):
+			cur.Lines = append(cur.Lines, DiffLine{Class: "hunk", Text: line})
+		case cur != nil && strings.HasPrefix(line, "+"):
+			cur.Lines = append(cur.Lines, DiffLine{Class: "add", Text: strings.TrimPrefix(line, "+")})
+		case cur != nil && strings.HasPrefix(line, "-"):
+			cur.Lines = append(cur.Lines, DiffLine{Class: "del", Text: strings.TrimPrefix(line, "-")})
+		case cur != nil:
+			// context line (starts with space or empty).
+			if strings.HasPrefix(line, " ") {
+				line = strings.TrimPrefix(line, " ")
+			}
+			cur.Lines = append(cur.Lines, DiffLine{Class: "context", Text: line})
+		}
+	}
+	flush()
+	return out
 }
 
 func (s *Server) handleFile(w http.ResponseWriter, r *http.Request) {

@@ -14,6 +14,30 @@
 </div>
 {{end}}
 
-<h3 style="margin-top:24px;font-size:15px;">What changed in the files</h3>
-<pre class="diff">{{.Diff}}</pre>
+{{if .DiffStat}}
+<div class="diffstat">{{.DiffStat}}</div>
+{{end}}
+
+{{if not .DiffGroups}}
+<div class="empty" style="margin-top:18px;">No file changes recorded for this snapshot.</div>
+{{else}}
+<div class="diff-files">
+  {{range .DiffGroups}}
+  <div class="diff-file">
+    <div class="diff-file-header">
+      <span class="diff-file-icon">📄</span>
+      <span class="diff-file-path">{{.Path}}</span>
+      {{if .Note}}<span class="diff-file-note diff-note-{{.Note}}">{{.Note}}</span>{{end}}
+    </div>
+    {{if eq .Note "binary"}}
+      <div class="diff-binary">Binary file — not shown.</div>
+    {{else}}
+      <div class="diff-body">
+        {{range .Lines}}<div class="diff-line diff-{{.Class}}"><span class="diff-marker"></span><span class="diff-text">{{.Text}}</span></div>{{end}}
+      </div>
+    {{end}}
+  </div>
+  {{end}}
+</div>
+{{end}}
 {{end}}

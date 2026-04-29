@@ -205,6 +205,41 @@ audit log, not a story.
 >   🐦 Lyrebird · Started tracking this folder · 6 hours ago
 > ```
 
+### 2026-04-28 — GitHub-style colored diff view
+
+User feedback on the "show what changed" page: "can we make it see the diff
+with red and green color more like how it's done traditionally?"
+
+The previous render dumped raw `git show` output as monospace text on a
+dark background — technically correct, visually a wall.
+
+**Changes**:
+
+1. New `gitstore.ShowPatch()` and `ShowStat()` use `git show --format=` to
+   strip the commit header (we already render actor + headline + date above,
+   so the duplicate metadata was noise).
+2. `parseDiff()` walks the unified-diff output and emits structured
+   `DiffFile` groups. Each line is classified as `add`, `del`, `hunk`, or
+   `context`. File-level metadata (`index`, `--- a/`, `+++ b/`, `old mode`,
+   `new mode`, `similarity`) is hidden — we already show the path, and a
+   small badge tells you `new file` / `deleted file` / `renamed` / `binary`.
+3. New CSS in `_layout.html` styles a GitHub-flavored diff:
+   - Each file is its own card (`#fff` background, light gray border, file
+     name in the header).
+   - Add lines: green tint (`#e6ffec` background, `#1a7f37` text, `+` marker).
+   - Del lines: red tint (`#ffebe9` background, `#cf222e` text, `−` marker).
+   - Hunk separator: light blue band (`#ddf4ff`).
+   - Context lines: plain white.
+   - Diffstat (`foo.py | 5 +++--`) sits above the file cards in a small
+     monospace block.
+4. Binary files are detected and replaced with "Binary file — not shown."
+   instead of showing garbage.
+
+Result: the same data now reads like a GitHub PR. Tested on:
+- A pure-add commit (Claude's `if __name__ == "__main__"` block).
+- A pure-delete commit (the `[restore] fib.py` undo).
+- The combined diff includes both colors when both exist.
+
 ### Things deferred (write down so we don't forget)
 
 - Notebook stripping (jupytext sidecar). Currently `.ipynb` diffs are noisy.

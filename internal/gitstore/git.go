@@ -151,9 +151,28 @@ func (s *Store) Log(n int, paths ...string) ([]LogEntry, error) {
 	return entries, nil
 }
 
-// Show returns the full commit message + diff for a hash.
+// Show returns the full commit message + diff for a hash (legacy callers).
 func (s *Store) Show(hash string) (string, error) {
 	out, err := s.run("show", "--patch", "--stat", hash)
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
+}
+
+// ShowPatch returns ONLY the patch portion (no commit header, no stat) for a
+// hash. Suitable for parsing into colored hunks in the UI.
+func (s *Store) ShowPatch(hash string) (string, error) {
+	out, err := s.run("show", "--format=", "--patch", hash)
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
+}
+
+// ShowStat returns ONLY the diffstat ("foo.py | 3 +-") for a hash.
+func (s *Store) ShowStat(hash string) (string, error) {
+	out, err := s.run("show", "--format=", "--stat", hash)
 	if err != nil {
 		return "", err
 	}
