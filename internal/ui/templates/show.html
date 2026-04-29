@@ -6,7 +6,7 @@
     <div class="subtitle">{{.Actor}} · {{.Date}}{{if .ShortHash}} · <span class="dim small">id {{.ShortHash}}</span>{{end}}</div>
   </div>
   <div class="show-hero-actions">
-    <form method="post" action="/rewind" style="display:inline;">
+    <form method="post" action="{{$.BasePath}}/rewind" style="display:inline;">
       <input type="hidden" name="hash" value="{{.Hash}}">
       <button class="btn btn-ghost" type="submit"
         onclick="return confirm('Bring the folder back to this state?\n\nReversible — Lyrebird saves a checkpoint first.')">{{icon "undo"}} Bring folder back to this state</button>
@@ -28,7 +28,7 @@
     <div class="convo-text">{{.Turn.AssistantText}}</div>
   </div>
   {{end}}
-  <a class="convo-link" href="/sessions/{{.Session.SessionID}}">show full conversation →</a>
+  <a class="convo-link" href="{{$.BasePath}}/sessions/{{.Session.SessionID}}">show full conversation →</a>
 </div>
 {{end}}
 

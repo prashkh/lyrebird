@@ -15,6 +15,7 @@ import (
 	"github.com/prashkh/lyrebird/internal/config"
 	"github.com/prashkh/lyrebird/internal/gitstore"
 	"github.com/prashkh/lyrebird/internal/handoff"
+	"github.com/prashkh/lyrebird/internal/registry"
 	"github.com/prashkh/lyrebird/internal/session"
 )
 
@@ -23,19 +24,17 @@ var tmplFS embed.FS
 
 // Server holds dependencies needed to render the UI.
 type Server struct {
-	repo  *config.Repo
-	store *gitstore.Store
-	sess  *session.Store
-	funcs template.FuncMap
+	registry *registry.Registry // always set
+	repo     *config.Repo       // set on per-request sub-servers; nil at the root
+	store    *gitstore.Store
+	sess     *session.Store
+	funcs    template.FuncMap
 }
 
-// New constructs the server.
-func New(r *config.Repo) (*Server, error) {
-	s := &Server{
-		repo:  r,
-		store: gitstore.New(r),
-		sess:  session.New(r),
-	}
+// New constructs a multi-project UI server backed by a registry.
+// The home page (/) lists projects; each project lives at /p/<id>/...
+func New(reg *registry.Registry) (*Server, error) {
+	s := &Server{registry: reg}
 	funcs := template.FuncMap{
 		"icon":      iconHTML,
 		"add":       func(a, b int) int { return a + b },
@@ -69,7 +68,19 @@ func New(r *config.Repo) (*Server, error) {
 }
 
 // Routes registers HTTP handlers on a fresh ServeMux and returns it.
+//   /        → project list
+//   /p/<id>/ → project-scoped (timeline, sessions, show, file, etc.)
 func (s *Server) Routes() *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", s.handleHome)
+	mux.HandleFunc("/p/", s.handleProjectScoped)
+	return mux
+}
+
+// projectMux returns the per-project sub-mux for `psub` (a Server bound
+// to one project's repo). All existing handler methods work because they
+// reference s.repo / s.store / s.sess on the receiver.
+func (s *Server) projectMux() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.handleTimeline)
 	mux.HandleFunc("/sessions", s.handleSessions)
@@ -85,6 +96,131 @@ func (s *Server) Routes() *http.ServeMux {
 	mux.HandleFunc("/travel", s.handleTravel)
 	mux.HandleFunc("/travel/state", s.handleTravelState)
 	return mux
+}
+
+// handleHome lists every tracked project as a card.
+func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	cards := s.buildProjectCards()
+	s.render(w, "home.html", map[string]any{
+		"Title":    "Lyrebird",
+		"Projects": cards,
+	})
+}
+
+// handleProjectScoped resolves /p/<id>/... to a project, builds a
+// per-request sub-Server bound to that project's stores, and dispatches
+// to projectMux. Existing handlers run unmodified — they reference
+// s.repo/s.store/s.sess on whichever Server is the receiver.
+func (s *Server) handleProjectScoped(w http.ResponseWriter, r *http.Request) {
+	rest := strings.TrimPrefix(r.URL.Path, "/p/")
+	id, sub, _ := strings.Cut(rest, "/")
+	if id == "" {
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+	proj := s.registry.ByID(id)
+	if proj == nil {
+		http.NotFound(w, r)
+		return
+	}
+	repo, err := config.Open(proj.Root)
+	if err != nil {
+		http.Error(w, "could not open project: "+err.Error(), http.StatusNotFound)
+		return
+	}
+	psub := &Server{
+		registry: s.registry,
+		repo:     repo,
+		store:    gitstore.New(repo),
+		sess:     session.New(repo),
+		funcs:    s.funcs,
+	}
+	r2 := r.Clone(r.Context())
+	r2.URL.Path = "/" + sub
+	psub.projectMux().ServeHTTP(w, r2)
+}
+
+// projectCardVM is a summary tile shown on the home page.
+type projectCardVM struct {
+	Project       registry.Project
+	BasePath      string
+	Total         int
+	AISnapshots   int
+	Manual        int
+	Sessions      int
+	FilesCount    int
+	LastActivity  string
+	LastHeadline  string
+	Available     bool
+}
+
+func (s *Server) buildProjectCards() []projectCardVM {
+	if s.registry == nil {
+		return nil
+	}
+	projects := s.registry.All()
+	cards := make([]projectCardVM, 0, len(projects))
+	for _, p := range projects {
+		c := projectCardVM{
+			Project:  p,
+			BasePath: "/p/" + p.ID,
+		}
+		repo, err := config.Open(p.Root)
+		if err != nil {
+			cards = append(cards, c)
+			continue
+		}
+		c.Available = true
+		store := gitstore.New(repo)
+		sess := session.New(repo)
+		entries, _ := store.Log(0)
+		c.Total = len(entries)
+		for _, e := range entries {
+			if ss, _, _ := sess.FindByCommit(e.Hash); ss != nil {
+				c.AISnapshots++
+			} else if !strings.HasPrefix(e.Subject, "[lyre]") &&
+				!strings.HasPrefix(e.Subject, "[safety]") &&
+				!strings.HasPrefix(e.Subject, "[restore]") &&
+				!strings.HasPrefix(e.Subject, "[revert]") {
+				c.Manual++
+			}
+		}
+		if list, err := sess.List(); err == nil {
+			c.Sessions = len(list)
+		}
+		if files, err := store.LsFiles(); err == nil {
+			c.FilesCount = len(filterDisplayFiles(files))
+		}
+		// Latest non-system event, if any
+		for _, e := range entries {
+			if strings.HasPrefix(e.Subject, "[lyre]") || strings.HasPrefix(e.Subject, "[safety]") {
+				continue
+			}
+			if t, err := time.Parse(time.RFC3339, e.Date); err == nil {
+				c.LastActivity = humanizeAgo(t)
+			}
+			files, _ := store.FilesChanged(e.Hash)
+			ev := eventVM{Subject: e.Subject}
+			if ss, _, _ := sess.FindByCommit(e.Hash); ss != nil {
+				ev.IsAI = true
+				ev.Agent = ss.Agent
+			} else if !strings.HasPrefix(e.Subject, "[lyre]") {
+				// manual or restore/revert
+			}
+			actor, _, _ := actorFor(ev)
+			c.LastHeadline = actor + " · " + renderHeadline(e.Subject, filterDisplayFiles(files), actor)
+			break
+		}
+		if c.LastActivity == "" {
+			c.LastActivity = "no activity yet"
+		}
+		cards = append(cards, c)
+	}
+	return cards
 }
 
 // handleRewind reverts the entire folder to the state captured at <hash>.
@@ -1147,6 +1283,22 @@ func (s *Server) render(w http.ResponseWriter, page string, data map[string]any)
 	}
 	if _, ok := data["Query"]; !ok {
 		data["Query"] = ""
+	}
+	// Inject project context: BasePath ("" when at the root, "/p/<id>" inside
+	// a project) and the full project list (used by the header switcher).
+	data["BasePath"] = ""
+	if _, ok := data["Project"]; !ok {
+		data["Project"] = (*registry.Project)(nil)
+	}
+	data["AllProjects"] = []registry.Project(nil)
+	if s.registry != nil {
+		data["AllProjects"] = s.registry.All()
+		if s.repo != nil {
+			if p := s.registry.ByRoot(s.repo.Root); p != nil {
+				data["BasePath"] = "/p/" + p.ID
+				data["Project"] = p
+			}
+		}
 	}
 	// We parse the named page template plus _layout, then execute "layout".
 	tmpl, err := template.New("").Funcs(s.funcs).ParseFS(tmplFS, "templates/_layout.html", "templates/"+page)

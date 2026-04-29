@@ -11,7 +11,7 @@
     <span class="badge {{if not .IsAI}}manual{{end}}">{{if .IsAI}}{{.Agent}}{{else}}manual{{end}}</span>
     <span class="hash">{{.ShortHash}}</span>
     <span>{{.Date}}</span>
-    <a class="show-link" href="/show/{{.Hash}}">view →</a>
+    <a class="show-link" href="{{$.BasePath}}/show/{{.Hash}}">view →</a>
   </div>
   <div class="subject">{{.Subject}}</div>
   <div class="prompt">{{.Highlight}}</div>

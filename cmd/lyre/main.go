@@ -14,6 +14,8 @@ Usage:
 Commands:
   init                 Initialize lyrebird tracking in the current folder
   status               Show repo status
+  register             Add the current folder to the global UI registry
+  projects             List every tracked folder
   snapshot [-m msg]    Take a manual snapshot
   log [<file>]         Show snapshot history (newest first)
   show <id>            Show diff + chat thread for a snapshot
@@ -48,6 +50,10 @@ func main() {
 		err = cmdInit(args)
 	case "status":
 		err = cmdStatus(args)
+	case "projects":
+		err = cmdProjects(args)
+	case "register":
+		err = cmdRegister(args)
 	case "snapshot":
 		err = cmdSnapshot(args)
 	case "log":

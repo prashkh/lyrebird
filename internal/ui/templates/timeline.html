@@ -15,7 +15,7 @@
   </div>
   <div class="hero-actions">
     {{if .LastUndoableHash}}
-    <form method="post" action="/undo" style="display:inline;">
+    <form method="post" action="{{$.BasePath}}/undo" style="display:inline;">
       <button class="btn btn-ghost" type="submit"
               title="Reverts: {{.LastUndoableHeadline}}"
               onclick="return confirm('Undo: {{.LastUndoableHeadline}}?\n\nReversible — Lyrebird saves a checkpoint before undoing.')">{{icon "undo"}} Undo</button>
@@ -23,13 +23,13 @@
     {{end}}
     <details class="snap-menu">
       <summary class="btn btn-ghost">{{icon "plus"}} Save now</summary>
-      <form method="post" action="/snapshot" class="snap-form">
+      <form method="post" action="{{$.BasePath}}/snapshot" class="snap-form">
         <input type="text" name="note" placeholder="optional note (e.g. 'before refactor')" maxlength="120">
         <button class="btn btn-primary btn-sm" type="submit">Save</button>
       </form>
     </details>
-    <a class="btn btn-ghost" href="/travel" title="Time travel — drag a slider to see the folder at any past moment">{{icon "clock"}} Travel</a>
-    <form method="post" action="/handoff" style="display:inline;">
+    <a class="btn btn-ghost" href="{{$.BasePath}}/travel" title="Time travel — drag a slider to see the folder at any past moment">{{icon "clock"}} Travel</a>
+    <form method="post" action="{{$.BasePath}}/handoff" style="display:inline;">
       <button class="btn btn-primary" type="submit">{{icon "package"}} Hand off</button>
     </form>
   </div>
@@ -66,7 +66,7 @@
       <div class="chapter-spine">
         {{range .Events}}
         <article class="story-item story-{{.ActorClass}}{{if .IsQuiet}} story-quiet{{end}}">
-          {{if not .IsQuiet}}<a class="story-overlay" href="/show/{{.Hash}}" aria-label="show what changed"></a>{{end}}
+          {{if not .IsQuiet}}<a class="story-overlay" href="{{$.BasePath}}/show/{{.Hash}}" aria-label="show what changed"></a>{{end}}
           <span class="node-link"><span class="node node-{{.ActorClass}}"></span></span>
           <div class="story-header">
             <div class="avatar">
@@ -79,12 +79,12 @@
                 <span class="when">· {{.Date}}</span>
               </div>
               {{if .UserPrompt}}
-              <a class="story-quote" href="/sessions/{{.SessionID}}">"{{.UserPrompt | truncate 160}}"</a>
+              <a class="story-quote" href="{{$.BasePath}}/sessions/{{.SessionID}}">"{{.UserPrompt | truncate 160}}"</a>
               {{end}}
               {{if not .IsQuiet}}
               <div class="story-actions">
-                <a class="story-action" href="/show/{{.Hash}}">{{icon "history"}} show what changed</a>
-                <form method="post" action="/rewind" class="inline-form">
+                <a class="story-action" href="{{$.BasePath}}/show/{{.Hash}}">{{icon "history"}} show what changed</a>
+                <form method="post" action="{{$.BasePath}}/rewind" class="inline-form">
                   <input type="hidden" name="hash" value="{{.Hash}}">
                   <button class="story-action story-action-warn" type="submit"
                     onclick="return confirm('Rewind the folder back to this point?\n\nReversible — Lyrebird saves a checkpoint first.')">{{icon "undo"}} rewind to here</button>

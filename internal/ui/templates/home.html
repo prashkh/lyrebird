@@ -1,0 +1,42 @@
+{{define "content"}}
+<div class="home-hero">
+  <h2>Your tracked folders</h2>
+  <div class="subtitle">{{len .Projects}} folder{{if ne (len .Projects) 1}}s{{end}} · click any to see its story.</div>
+</div>
+
+{{if not .Projects}}
+<div class="empty">
+  <h3>Nothing tracked yet.</h3>
+  <p class="dim">In your terminal:</p>
+  <pre><code>cd ~/your-project
+lyre init
+lyre watch &</code></pre>
+  <p class="dim">Then come back to this page.</p>
+</div>
+{{else}}
+<div class="project-grid">
+  {{range .Projects}}
+  <a class="project-card{{if not .Available}} project-card-stale{{end}}" href="{{.BasePath}}/">
+    <div class="project-card-name">
+      {{icon "folder"}} {{.Project.Name}}
+    </div>
+    <div class="project-card-path">{{.Project.Root}}</div>
+    {{if .Available}}
+    <div class="project-card-stats">
+      <span><strong>{{.Total}}</strong> change{{if ne .Total 1}}s{{end}}</span>
+      {{if .AISnapshots}}<span><strong>{{.AISnapshots}}</strong> from Claude</span>{{end}}
+      {{if .Sessions}}<span><strong>{{.Sessions}}</strong> conversation{{if ne .Sessions 1}}s{{end}}</span>{{end}}
+      {{if .FilesCount}}<span><strong>{{.FilesCount}}</strong> file{{if ne .FilesCount 1}}s{{end}}</span>{{end}}
+    </div>
+    <div class="project-card-last">
+      {{if .LastHeadline}}<span class="project-card-headline">{{.LastHeadline}}</span><br>{{end}}
+      <span class="dim small">last change {{.LastActivity}}</span>
+    </div>
+    {{else}}
+    <div class="project-card-stale-msg dim small">folder no longer accessible</div>
+    {{end}}
+  </a>
+  {{end}}
+</div>
+{{end}}
+{{end}}

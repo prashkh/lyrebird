@@ -23,9 +23,9 @@
     </div>
     {{if .UserPrompt}}<div class="story-quote">"{{.UserPrompt}}"</div>{{end}}
     <div class="story-actions">
-      <a class="story-action" href="/show/{{.Hash}}">{{icon "history"}} show what changed</a>
+      <a class="story-action" href="{{$.BasePath}}/show/{{.Hash}}">{{icon "history"}} show what changed</a>
       {{if ne $i 0}}
-      <form method="post" action="/restore" class="inline-form">
+      <form method="post" action="{{$.BasePath}}/restore" class="inline-form">
         <input type="hidden" name="path" value="{{$.Path}}">
         <input type="hidden" name="hash" value="{{.Hash}}">
         <button class="story-action" type="submit"

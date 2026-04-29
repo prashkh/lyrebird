@@ -26,7 +26,7 @@
   <div class="travel-empty" id="travel-files-empty" hidden>Empty folder.</div>
   <div id="travel-tree-host"></div>
   <div class="actions">
-    <form method="post" action="/rewind" id="travel-form">
+    <form method="post" action="{{$.BasePath}}/rewind" id="travel-form">
       <input type="hidden" name="hash" id="travel-hash">
       <button class="btn btn-primary" type="submit"
         onclick="return confirm('Bring the folder back to this state?\n\nReversible — Lyrebird saves a checkpoint first.')">
@@ -85,7 +85,7 @@
         }
         return html + '</li>';
       }
-      return '<li class="tree-node tree-file"><a class="tree-row tree-row-file" href="/file?path=' + encodeURIComponent(n.path) + '"><span class="tree-glyph">·</span><span class="tree-name">' + escape(n.name) + '</span></a></li>';
+      return '<li class="tree-node tree-file"><a class="tree-row tree-row-file" href="{{$.BasePath}}/file?path=' + encodeURIComponent(n.path) + '"><span class="tree-glyph">·</span><span class="tree-name">' + escape(n.name) + '</span></a></li>';
     }
     function escape(s) { return s.replace(/[&<>"']/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
     return '<ul class="tree-list">' + root.children.map(nodeHTML).join('') + '</ul>';

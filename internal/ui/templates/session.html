@@ -16,8 +16,8 @@
   {{end}}
   <div class="turn-meta">
     Turn {{add $i 1}} · {{$t.Timestamp.Format "15:04:05"}} · tool={{$t.Tool}}
-    {{if $t.SnapshotHash}} · <a href="/show/{{$t.SnapshotHash}}">snapshot {{shortHash $t.SnapshotHash}}</a>{{end}}
-    {{if $t.FilesChanged}} · files: {{range $j, $f := $t.FilesChanged}}{{if $j}}, {{end}}<a href="/file?path={{$f}}">{{$f}}</a>{{end}}{{end}}
+    {{if $t.SnapshotHash}} · <a href="{{$.BasePath}}/show/{{$t.SnapshotHash}}">snapshot {{shortHash $t.SnapshotHash}}</a>{{end}}
+    {{if $t.FilesChanged}} · files: {{range $j, $f := $t.FilesChanged}}{{if $j}}, {{end}}<a href="{{$.BasePath}}/file?path={{$f}}">{{$f}}</a>{{end}}{{end}}
   </div>
 </div>
 {{end}}

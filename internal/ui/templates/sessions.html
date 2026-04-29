@@ -12,7 +12,7 @@
   <tr>
     <td>{{.UpdatedAt.Format "2006-01-02 15:04"}}</td>
     <td>{{.Agent}}</td>
-    <td class="hash"><a href="/sessions/{{.SessionID}}">{{shortID .SessionID}}</a></td>
+    <td class="hash"><a href="{{$.BasePath}}/sessions/{{.SessionID}}">{{shortID .SessionID}}</a></td>
     <td>{{len .Turns}}</td>
     <td>{{.PromptSummary | truncate 100}}</td>
   </tr>

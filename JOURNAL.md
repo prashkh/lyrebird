@@ -512,6 +512,72 @@ for a "serious" tracking tool. The tree-on-travel-page idea survives
 the revert because it's a useful info-architecture change, not a
 stylistic flourish.
 
+### 2026-04-29 — v0.2.0: port auto-fallback + multi-project UI
+
+User report: "I feel like there are some port conflicts? I am running this
+but don't see it. If we are tracking multiple folders in different chat
+threads that should just appear as session right?"
+
+Two real issues:
+1. `lyre ui` was hardcoded to port 6789 — collided with anything else on
+   that port (an old lyre ui, a Python http.server, etc.).
+2. The UI was per-folder. To see folder B you had to `cd` to it and run
+   another `lyre ui` on a different port. Multiple browser tabs.
+
+**Fix 1 — port auto-fallback** (`cmd/lyre/cmd_ui.go`): if the requested
+port is busy, fall through to `127.0.0.1:0` (OS-assigned free port) and
+log the actual address. Prints "Port 6789 is busy, picking a free one..."
+so the user sees what happened.
+
+**Fix 2 — multi-project UI** (the substantive change):
+
+- New `internal/registry` package: maintains `~/.lyre/registry.json`
+  with `{id, name, root, registered}` per project. `Register()` is
+  idempotent (re-registering refreshes the entry); `prune()` drops
+  projects whose `.lyrebird/` no longer exists. Slugs are URL-safe and
+  collision-resolved (`-2`, `-3`, ...).
+
+- `lyre init` registers the folder automatically. Added `lyre register`
+  for folders that were tracked before this feature, and `lyre projects`
+  to list everything from the CLI.
+
+- UI Server refactor: instead of binding to a single repo, it holds a
+  `*registry.Registry` and a nullable `repo`/`store`/`sess`. The router
+  dispatches:
+    /        → project list (home page)
+    /p/<id>/ → project-scoped (timeline, sessions, show, file, …)
+
+- The clever bit: the router for `/p/<id>/` resolves the project, builds
+  a per-request **sub-Server** with that project's `repo`/`store`/`sess`
+  set, and dispatches via a sub-mux that calls existing handler methods.
+  All ~15 existing handlers (handleTimeline, handleShow, handleFile, …)
+  are reused unchanged because they're methods on Server and reference
+  `s.repo`/`s.store`/`s.sess`, which are now the per-request fields.
+
+- Templates updated: every internal URL prefixed with `{{$.BasePath}}`
+  (where the leading `$.` references the root data, important inside
+  `{{range}}` blocks where `.` is the loop variable). On the home page
+  `BasePath` is `""`; inside a project it's `"/p/<id>"`.
+
+- New `home.html`: project cards with file count, change count, AI
+  count, conversation count, last-activity headline.
+
+- Header changes (`_layout.html`):
+  - Logo always links to `/`
+  - Per-project nav (Story / Conversations) only shown inside a project
+  - New project switcher dropdown when more than one project registered
+  - Search box only visible inside a project (it searches one project's
+    history)
+
+- `cmd_ui.go` opens the home page at the root URL, OR jumps straight to
+  the current folder's project view if `lyre ui` was launched from
+  inside a tracked folder.
+
+End-to-end verified: home page lists three test folders, clicking one
+goes to /p/<id>/, switcher reveals all projects + an "All projects"
+link back to home, snapshot detail at /p/<id>/show/<hash> renders the
+GitHub-style diff correctly.
+
 ### Things deferred (write down so we don't forget)
 
 - Notebook stripping (jupytext sidecar). Currently `.ipynb` diffs are noisy.

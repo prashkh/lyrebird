@@ -11,6 +11,7 @@ import (
 
 	"github.com/prashkh/lyrebird/internal/config"
 	"github.com/prashkh/lyrebird/internal/gitstore"
+	"github.com/prashkh/lyrebird/internal/registry"
 	"github.com/prashkh/lyrebird/internal/session"
 )
 
@@ -41,6 +42,14 @@ func cmdInit(args []string) error {
 	if err != nil {
 		return fmt.Errorf("initial snapshot: %w", err)
 	}
+	// Register the folder in the global registry so `lyre ui` from
+	// anywhere can list it as a project.
+	if reg, err := registry.LoadDefault(); err == nil {
+		if _, err := reg.Register(repo.Config.FolderName, repo.Root); err == nil {
+			_ = reg.Save()
+		}
+	}
+
 	fmt.Printf("Initialized lyrebird repo at %s\n", repo.LyrebirdDir)
 	if hash != "" {
 		fmt.Printf("Initial snapshot: %s\n", hash[:12])
@@ -50,7 +59,48 @@ func cmdInit(args []string) error {
 	fmt.Println("Next steps:")
 	fmt.Println("  lyre watch &        # auto-snapshot on every file change")
 	fmt.Println("  lyre install-hook   # capture Claude Code chat threads")
-	fmt.Println("  lyre ui             # open the timeline UI")
+	fmt.Println("  lyre ui             # open the timeline UI (shows ALL tracked folders)")
+	return nil
+}
+
+// cmdRegister adds (or refreshes) the current folder in the global registry.
+// Useful for folders that were tracked before the registry was introduced,
+// or to rename a project.
+func cmdRegister(args []string) error {
+	repo, err := config.Open(".")
+	if err != nil {
+		return err
+	}
+	reg, err := registry.LoadDefault()
+	if err != nil {
+		return err
+	}
+	p, err := reg.Register(repo.Config.FolderName, repo.Root)
+	if err != nil {
+		return err
+	}
+	if err := reg.Save(); err != nil {
+		return err
+	}
+	fmt.Printf("Registered %q (id: %s)\n", p.Name, p.ID)
+	fmt.Printf("Visible in `lyre ui` as a project on the home page.\n")
+	return nil
+}
+
+// cmdProjects lists every tracked folder.
+func cmdProjects(args []string) error {
+	reg, err := registry.LoadDefault()
+	if err != nil {
+		return err
+	}
+	all := reg.All()
+	if len(all) == 0 {
+		fmt.Println("(no folders tracked yet — run `lyre init` in one)")
+		return nil
+	}
+	for _, p := range all {
+		fmt.Printf("%-20s  %s\n", p.Name, p.Root)
+	}
 	return nil
 }
 

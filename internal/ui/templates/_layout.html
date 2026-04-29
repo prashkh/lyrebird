@@ -185,6 +185,32 @@ details.snap-menu > summary::-webkit-details-marker { display: none; }
 .snap-form input { flex: 1; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; background: var(--surface-2); color: var(--text); }
 .snap-form input::placeholder { color: var(--text-faint); }
 
+/* ─────────────────── Home (project list) ─────────────────── */
+.home-hero { padding: 8px 0 22px; border-bottom: 1px solid var(--border); margin-bottom: 22px; }
+.home-hero h2 { margin: 0 0 4px; }
+.project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.project-card { display: block; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; color: var(--text); text-decoration: none; transition: border-color 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease; }
+.project-card:hover { border-color: var(--brand); transform: translateY(-1px); box-shadow: var(--shadow); text-decoration: none; }
+.project-card-name { display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+.project-card-name .icon { color: var(--brand); width: 18px; height: 18px; }
+.project-card-path { font-family: var(--font-mono); font-size: 12px; color: var(--text-dim); margin-bottom: 14px; word-break: break-all; }
+.project-card-stats { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--text-2); margin-bottom: 10px; }
+.project-card-stats strong { color: var(--text); font-weight: 600; }
+.project-card-last { font-size: 12px; color: var(--text-dim); line-height: 1.55; }
+.project-card-headline { color: var(--text-2); font-style: italic; }
+.project-card-stale { opacity: 0.5; }
+.project-card-stale-msg { font-style: italic; }
+
+/* Project switcher in the topbar */
+details.project-switcher { position: relative; }
+details.project-switcher > summary { list-style: none; cursor: pointer; padding: 4px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; color: var(--text); user-select: none; }
+details.project-switcher > summary::-webkit-details-marker { display: none; }
+details.project-switcher > summary:hover { background: var(--surface-2); }
+.project-switcher-menu { position: absolute; top: calc(100% + 6px); left: 0; min-width: 220px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 6px; z-index: 5; }
+.project-switcher-menu a { display: block; padding: 6px 10px; font-size: 13px; color: var(--text); border-radius: var(--radius-sm); }
+.project-switcher-menu a:hover { background: var(--surface-2); text-decoration: none; }
+.project-switcher-menu hr { border: none; border-top: 1px solid var(--border-soft); margin: 4px 0; }
+
 /* ─────────────────── File chips ─────────────────── */
 .filelist-row { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; padding: 6px 0 26px; }
 .file-chip { display: inline-flex; align-items: center; gap: 5px; background: var(--surface-2); color: var(--text-2); padding: 3px 9px; border-radius: 999px; font-family: var(--font-mono); font-size: 12px; text-decoration: none; border: 1px solid var(--border-soft); }
@@ -415,15 +441,29 @@ th { background: var(--surface-2); font-weight: 600; font-size: 11px; color: var
 <body>
 <header class="topbar">
   <a href="/" class="logo">{{icon "bird"}} Lyrebird</a>
-  <nav>
-    <a href="/">Story</a>
-    <a href="/sessions">Conversations</a>
-  </nav>
+  {{if .Project}}
+    <nav>
+      <a href="{{$.BasePath}}/">Story</a>
+      <a href="{{$.BasePath}}/sessions">Conversations</a>
+    </nav>
+    {{if gt (len .AllProjects) 1}}
+    <details class="project-switcher">
+      <summary>{{.Project.Name}} ▾</summary>
+      <div class="project-switcher-menu">
+        <a href="/">All projects</a>
+        <hr>
+        {{range .AllProjects}}<a href="/p/{{.ID}}/">{{.Name}}</a>{{end}}
+      </div>
+    </details>
+    {{end}}
+  {{end}}
   <span class="spacer"></span>
-  <form action="/search" method="get" class="searchbox">
+  {{if .Project}}
+  <form action="{{$.BasePath}}/search" method="get" class="searchbox">
     {{icon "search"}}
     <input type="search" name="q" placeholder="Search..." value="{{.Query}}">
   </form>
+  {{end}}
   <button class="theme-toggle" type="button" aria-label="Toggle theme" onclick="(function(){var d=document.documentElement;var t=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',t);try{localStorage.setItem('lyre-theme',t);}catch(e){}})()">
     <span class="sun-icon">{{icon "sun"}}</span>
     <span class="moon-icon">{{icon "moon"}}</span>
