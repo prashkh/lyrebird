@@ -1,38 +1,35 @@
 {{define "content"}}
-<a href="/" style="font-size:13px;">← Back to story</a>
-<div class="hero" style="border-bottom:1px solid #e5e5e5;">
-  <div class="hero-main">
-    <h2 style="font-family:ui-monospace,monospace;font-size:22px;">📄 {{.Path}}</h2>
-    <div class="hero-sub">{{len .Versions}} version{{if ne (len .Versions) 1}}s{{end}} of this file</div>
-  </div>
+<a href="/" class="back-link">{{icon "arrow-left"}} Back to story</a>
+<div class="file-hero">
+  <h2 class="file-title">{{icon "file"}} <span class="file-mono">{{.Path}}</span></h2>
+  <div class="subtitle">{{len .Versions}} version{{if ne (len .Versions) 1}}s{{end}} of this file</div>
 </div>
 
 {{if not .Versions}}
   <div class="empty">No history for this file.</div>
 {{else}}
-<div class="story" style="margin-top:18px;">
+<div class="story file-history">
 {{range $i, $v := .Versions}}
 <div class="story-item story-{{.ActorClass}}">
-  <div class="story-actor"><span class="avatar">{{.ActorIcon}}</span></div>
+  <div class="avatar">
+    {{if eq .ActorClass "you"}}{{icon "user"}}{{else if eq .ActorClass "ai"}}{{icon "sparkles"}}{{else}}{{icon "feather"}}{{end}}
+  </div>
   <div class="story-body">
     <div class="story-line">
-      <strong class="actor-name">{{.Actor}}</strong>
-      <span class="story-text">
-        {{if eq $i 0}}<span style="background:#fff5e1;padding:1px 6px;border-radius:3px;font-size:11px;font-weight:600;margin-right:4px;">CURRENT</span>{{end}}
-        {{.Headline}}
-      </span>
+      {{if eq $i 0}}<span class="badge-current">CURRENT</span>{{end}}
+      <span class="actor-name">{{.Actor}}</span>
+      <span class="story-text">{{.Headline}}</span>
       <span class="when">· {{.Date}}</span>
     </div>
-    {{if .UserPrompt}}<div class="prompt-line">"{{.UserPrompt}}"</div>{{end}}
-    <div class="story-meta">
-      <a href="/show/{{.Hash}}">show what changed →</a>
+    {{if .UserPrompt}}<div class="story-quote">"{{.UserPrompt}}"</div>{{end}}
+    <div class="story-actions">
+      <a class="story-action" href="/show/{{.Hash}}">{{icon "history"}} show what changed</a>
       {{if ne $i 0}}
-      &nbsp; · &nbsp;
-      <form method="post" action="/restore" style="display:inline;">
+      <form method="post" action="/restore" class="inline-form">
         <input type="hidden" name="path" value="{{$.Path}}">
         <input type="hidden" name="hash" value="{{.Hash}}">
-        <button class="btn btn-ghost" type="submit" style="font-size:12px;padding:4px 10px;"
-          onclick="return confirm('Bring {{$.Path}} back to this version?\n\nReversible — Lyrebird saves a checkpoint first.')">↶ Bring back this version</button>
+        <button class="story-action" type="submit"
+          onclick="return confirm('Bring {{$.Path}} back to this version?\n\nReversible — Lyrebird saves a checkpoint first.')">{{icon "undo"}} bring back this version</button>
       </form>
       {{end}}
     </div>

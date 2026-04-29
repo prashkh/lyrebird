@@ -4,13 +4,20 @@
 <div class="subtitle">{{.Actor}} · {{.Date}}{{if .ShortHash}} · <span class="dim small">id {{.ShortHash}}</span>{{end}}</div>
 
 {{if .Turn}}
-<div class="event" style="margin-bottom:18px;">
-  <div class="meta">
-    <span class="badge">{{.Session.Agent}}</span>
-    <a class="show-link" href="/sessions/{{.Session.SessionID}}">show full conversation →</a>
+<div class="convo-card">
+  {{if .Turn.UserPrompt}}
+  <div class="convo-turn convo-user">
+    <div class="convo-label">You asked</div>
+    <div class="convo-text">{{.Turn.UserPrompt}}</div>
   </div>
-  {{if .Turn.UserPrompt}}<div class="prompt"><em>You asked:</em> {{.Turn.UserPrompt}}</div>{{end}}
-  {{if .Turn.AssistantText}}<div class="prompt" style="background:#f0fbf2;border-left-color:#3a8b54;margin-top:8px;"><em>Claude said:</em> {{.Turn.AssistantText}}</div>{{end}}
+  {{end}}
+  {{if .Turn.AssistantText}}
+  <div class="convo-turn convo-assistant">
+    <div class="convo-label">Claude said</div>
+    <div class="convo-text">{{.Turn.AssistantText}}</div>
+  </div>
+  {{end}}
+  <a class="convo-link" href="/sessions/{{.Session.SessionID}}">show full conversation →</a>
 </div>
 {{end}}
 

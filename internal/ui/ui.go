@@ -158,23 +158,24 @@ func (s *Server) handleSnapshot(w http.ResponseWriter, r *http.Request) {
 }
 
 type eventVM struct {
-	Hash        string
-	ShortHash   string
-	Date        string // human-friendly: "just now", "5 min ago", "Today at 3:42 pm"
-	When        time.Time
-	Subject     string
-	Headline    string // friendlier rendering of the change
-	Files       []string
-	Actor       string // "You", "Claude", "Lyrebird"
-	ActorIcon   string // "✋", "🤖", "🐦"
-	ActorClass  string // "you", "ai", "lyre"
-	IsAI        bool
-	IsLyre      bool   // true for [lyre]/[safety]/[restore]/[revert]
-	IsQuiet     bool   // true for events with no useful diff to show ([lyre], [safety])
-	Agent       string
-	SessionID   string
-	UserPrompt  string
-	DayBucket   string // "Today", "Yesterday", "Tuesday", "Apr 12"
+	Hash         string
+	ShortHash    string
+	Date         string // human-friendly: "just now", "5 min ago", "Today at 3:42 pm"
+	When         time.Time
+	Subject      string
+	Headline     string        // plain text fallback (used in commit messages, search snippets)
+	HeadlineHTML template.HTML // friendly sentence with inline clickable filenames
+	Files        []string
+	Actor        string // "You", "Claude", "Lyrebird"
+	ActorIcon    string // "✋", "🤖", "🐦"
+	ActorClass   string // "you", "ai", "lyre"
+	IsAI         bool
+	IsLyre       bool // true for [lyre]/[safety]/[restore]/[revert]
+	IsQuiet      bool // true for events with no useful diff to show ([lyre], [safety])
+	Agent        string
+	SessionID    string
+	UserPrompt   string
+	DayBucket    string // "Today", "Yesterday", "Tuesday", "Apr 12"
 }
 
 // summaryVM is the "what's been happening here" panel at the top of the timeline.
@@ -247,9 +248,70 @@ func (s *Server) buildEvents(n int) ([]eventVM, error) {
 		}
 		ev.Actor, ev.ActorIcon, ev.ActorClass = actorFor(ev)
 		ev.Headline = renderHeadline(e.Subject, ev.Files, ev.Actor)
+		ev.HeadlineHTML = renderHeadlineHTML(e.Subject, ev.Files, ev.Actor)
 		out = append(out, ev)
 	}
 	return out, nil
+}
+
+// renderHeadlineHTML builds the sentence with each file name wrapped in a
+// clickable `<a class="inline-file">` tag. Returns template.HTML so the
+// timeline template renders it raw.
+func renderHeadlineHTML(subject string, files []string, actor string) template.HTML {
+	switch {
+	case strings.HasPrefix(subject, "[lyre]"):
+		return "Started tracking this folder"
+	case strings.HasPrefix(subject, "[safety]"):
+		return "Saved a checkpoint before undoing"
+	case strings.HasPrefix(subject, "[restore]"):
+		rest := strings.TrimSpace(strings.TrimPrefix(subject, "[restore]"))
+		fileName := rest
+		if i := strings.Index(rest, " from "); i >= 0 {
+			fileName = rest[:i]
+		}
+		return template.HTML("Brought " + fileLink(fileName) + " back to an earlier version")
+	case strings.HasPrefix(subject, "[revert]"):
+		return "Rolled the folder back to an earlier state"
+	}
+	if len(files) == 0 {
+		return "Made a change"
+	}
+	verb := "edited"
+	return template.HTML(verb + " " + humanLinkList(files, 3))
+}
+
+// fileLink wraps a single file path in an <a> tag. Path is HTML-escaped.
+func fileLink(path string) string {
+	escPath := template.HTMLEscapeString(path)
+	return `<a class="inline-file" href="/file?path=` + escPath + `">` + escPath + `</a>`
+}
+
+// humanLinkList renders a list of file paths as clickable inline links with
+// proper "and" grammar. Mirrors humanList but emits HTML.
+func humanLinkList(s []string, max int) string {
+	if len(s) == 0 {
+		return ""
+	}
+	if len(s) == 1 {
+		return fileLink(s[0])
+	}
+	more := 0
+	if len(s) > max {
+		more = len(s) - max
+		s = s[:max]
+	}
+	links := make([]string, len(s))
+	for i, p := range s {
+		links[i] = fileLink(p)
+	}
+	if len(links) == 2 && more == 0 {
+		return links[0] + " and " + links[1]
+	}
+	if more > 0 {
+		return strings.Join(links, ", ") + fmt.Sprintf(`, and <span class="dim">%d more</span>`, more)
+	}
+	last := links[len(links)-1]
+	return strings.Join(links[:len(links)-1], ", ") + ", and " + last
 }
 
 // actorFor returns the friendly name, icon, and CSS class for an event.

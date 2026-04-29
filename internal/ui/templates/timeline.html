@@ -55,31 +55,19 @@
     <div class="day">
       <div class="day-label">{{.Label}}</div>
       {{range .Events}}
-      <div class="story-item story-{{.ActorClass}}{{if .IsLyre}} story-system{{end}}">
+      <div class="story-item story-{{.ActorClass}}{{if .IsQuiet}} story-quiet{{end}}">
         <div class="avatar">
           {{if eq .ActorClass "you"}}{{icon "user"}}{{else if eq .ActorClass "ai"}}{{icon "sparkles"}}{{else}}{{icon "feather"}}{{end}}
         </div>
         <div class="story-body">
           <div class="story-line">
-            <strong class="actor-name">{{.Actor}}</strong>
-            <span class="story-text">{{.Headline}}</span>
+            <span class="actor-name">{{.Actor}}</span>
+            <span class="story-text">{{.HeadlineHTML}}</span>
             <span class="when">· {{.Date}}</span>
+            {{if not .IsQuiet}}<a class="story-detail" href="/show/{{.Hash}}">{{icon "arrow-right"}}</a>{{end}}
           </div>
           {{if .UserPrompt}}
-          <a class="prompt-line" href="/sessions/{{.SessionID}}">
-            <span class="quote">"{{.UserPrompt | truncate 180}}"</span>
-            <span class="prompt-cta">{{icon "chat"}} show conversation</span>
-          </a>
-          {{end}}
-          {{if and .Files (not .IsQuiet)}}
-          <div class="story-files">
-            {{range $i, $f := .Files}}<a class="file-chip" href="/file?path={{$f}}">{{icon "file"}}{{$f}}</a>{{end}}
-          </div>
-          {{end}}
-          {{if not .IsQuiet}}
-          <div class="story-meta">
-            <a href="/show/{{.Hash}}">show what changed {{icon "arrow-right"}}</a>
-          </div>
+          <a class="story-quote" href="/sessions/{{.SessionID}}">"{{.UserPrompt | truncate 160}}"</a>
           {{end}}
         </div>
       </div>

@@ -289,6 +289,92 @@ style, theme-aware via `currentColor`. Icons used:
 
 **Result**: same data, totally different feel. Dark theme is the default.
 
+### 2026-04-28 — UX pass 2: cut visual busyness, fix theme-broken contrast
+
+User feedback after the first UX pass:
+- "Some color themes are still off"
+- "This content is great but maybe still visually too busy"
+- "I can barely see the 'Adding test_fib.py' color" (assistant text on the show page)
+
+**Root cause for the contrast bug**: my old `show.html` used inline styles
+like `style="background:#f0fbf2;border-left-color:#3a8b54"` — hardcoded
+light-mode colors. The user had switched to dark mode (which they'd added a
+toggle for, plus a full theme-token system in `_layout.html`), so the
+prompt cards rendered as light-green tint with the inherited light text
+color → barely visible. Same hardcoded-color trap on the file-history
+`CURRENT` badge.
+
+**Diagnosis for "too busy"**: each story item had FIVE visual elements
+fighting for attention — avatar, actor name + sentence, prompt-box card,
+file-chip row, and an explicit "show what changed →" link. That's a wall
+of UI per row when the data is "X edited Y at Z."
+
+**Fixes**:
+
+1. **Theme-aware everywhere**. Removed every inline style that hardcoded a
+   color. New `convo-card`, `convo-user`, `convo-assistant`, `convo-label`,
+   `convo-text` classes on the show page that route through `--prompt-bg`,
+   `--asst-bg`, `--text`, `--text-2`, `--actor-you`, `--actor-ai`. Same for
+   file-history — `CURRENT` badge now uses `var(--actor-you)` so it pops
+   in either theme.
+
+2. **Inline filenames in the sentence** — new `renderHeadlineHTML`
+   function returns `template.HTML` with each filename wrapped as
+   `<a class="inline-file">`. Removed the redundant `.story-files` chip
+   row entirely. The headline now reads "edited `fib.py` and
+   `transcripts/sess1.jsonl`" with each filename as a clickable mono pill
+   inline in the sentence.
+
+3. **Quieter AI prompt** — replaced the boxed `prompt-line` card with a
+   subtle `.story-quote`: italic, no background, just a thin
+   `border-left` in the AI-blue color. One line of text, not a card.
+
+4. **Demoted "show what changed"** — removed it from the visible flow
+   entirely on the timeline. Each story item gets a small `.story-detail`
+   arrow that's `opacity: 0` by default and reveals on row hover. The full
+   row also has a hover background tint, so the click affordance is clear
+   without permanent visual noise.
+
+5. **Right-aligned time** — moved the `· 7 hours ago` to flow naturally at
+   the end of the sentence rather than in a separate flex slot. Safer at
+   narrow viewports where flex was breaking the headline into one-word-per-line
+   stacks.
+
+6. **Quieter system events** — `[lyre]` / `[safety]` events now use
+   `.story-quiet` styling: smaller avatar (22px vs 28px), tighter padding
+   (4px vs 10px), 0.55 opacity. They become a faint footnote in the story
+   instead of competing for attention.
+
+7. **File history tidied** — wrote a proper `.file-hero`, `.back-link`,
+   `.file-mono` instead of inline-style soup. The two per-version actions
+   ("show what changed", "bring back this version") render as quiet
+   text-buttons with icons, no visible button chrome.
+
+**Bug along the way**: putting `<a>` elements inside an `<a class="story-link">`
+wrapper caused the browser to auto-close the outer link prematurely (HTML
+spec — anchors can't nest). Reverted to a `<div>` row with inline links
+inside; the row gets a hover-tint background plus a hover-revealed detail
+arrow on the right, which gives the same "whole row is clickable-ish" feel
+without the spec violation.
+
+**Result**: a story item that used to render as
+
+```
+✋ You · Edited hello.py and notes.md · 6 hours ago
+   hello.py  notes.md
+   show what changed →
+```
+
+now renders as
+
+```
+✋ You  edited `hello.py` and `notes.md`  · 6 hours ago
+```
+
+Same information, half the visual weight, and the filenames are
+themselves clickable. The "show what changed" arrow appears on hover
+instead of always.
+
 ### Things deferred (write down so we don't forget)
 
 - Notebook stripping (jupytext sidecar). Currently `.ipynb` diffs are noisy.
