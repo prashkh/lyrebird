@@ -7,7 +7,6 @@ import "fmt"
 func cmdSessions(args []string) error { return notImpl("sessions") }
 func cmdSession(args []string) error  { return notImpl("session") }
 func cmdSearch(args []string) error   { return notImpl("search") }
-func cmdWatch(args []string) error    { return notImpl("watch") }
 func cmdHook(args []string) error     { return notImpl("hook") }
 func cmdHandoff(args []string) error  { return notImpl("handoff") }
 func cmdUI(args []string) error       { return notImpl("ui") }
