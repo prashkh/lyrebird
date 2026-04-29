@@ -20,24 +20,38 @@ See [PROBLEM.md](./PROBLEM.md) for the motivating examples.
 ## Quick start
 
 ```bash
-# (eventually) curl -fsSL https://lyrebird.dev/install.sh | sh
-# for now, build from source:
+# Build from source (eventually: curl -fsSL https://lyrebird.dev/install.sh | sh)
+git clone https://github.com/prashkh/lyrebird
+cd lyrebird
 go build -o bin/lyre ./cmd/lyre
+sudo cp bin/lyre /usr/local/bin/
 
-# initialize tracking in a folder
+# Initialize tracking in a folder
 cd ~/myproject
-~/path/to/lyre init
+lyre init
 
-# start the watcher (snapshots every change automatically)
+# Capture chat threads from Claude Code sessions
+lyre install-hook            # one-time: patches ~/.claude/settings.json
+
+# Start the watcher in another terminal (snapshots every change)
 lyre watch &
 
-# explore history
+# Explore history
 lyre log
 lyre sessions
+lyre session <id>
 lyre show <snapshot-id>
+lyre search "route_manhattan"
 
-# package the folder + a summary for another AI
-lyre handoff
+# Restore (always reversible — auto-snapshots current state first)
+lyre restore <file> <snapshot-id>
+lyre revert <snapshot-id>
+
+# Open the timeline + session UI
+lyre ui                      # http://localhost:6789
+
+# Package the folder + a summary for another AI
+lyre handoff -o ~/handoff
 ```
 
 ## Layout

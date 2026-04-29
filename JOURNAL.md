@@ -73,6 +73,26 @@ Phases 4 (Codex CLI), 8 (Cursor), 9 (VS Code) deferred to a follow-up build.
 - Decision: server-rendered, full page navigations. HTMX deferred — the localhost roundtrip is <10ms anyway.
 - Verified end-to-end via the preview tool: timeline → snapshot detail → session view → handoff. All routes return 200, pages render correctly with chat-thread attribution.
 
+### End-to-end verification
+
+Ran a scripted scenario in `/tmp/lyre-e2e` that exercises every piece:
+
+1. `lyre init` → initial snapshot
+2. Started `lyre watch` in the background
+3. Manually created `README.md` → watcher caught it (snapshot `9cedc05`, `[manual]`)
+4. Simulated Claude Code session `sess_aaa_111`, turn 1: "Create a Python script that prints fibonacci numbers" → `lyre hook` snapshot `0db834a`, `[ai]`
+5. Same session, turn 2: "Add a main block that prints first 10" → snapshot `798dcc5`
+6. Different session `sess_bbb_222`, turn 1: "Add a test for the fib function using pytest" → snapshot `8e0226c`
+7. Manually wrote `scratch.md` → watcher caught it (snapshot `d08bd8c`, `[manual]`)
+8. `lyre restore fib.py 0db834a` → rolled fib.py back to first AI version, auto-snapshotted current state, then committed the restore as snapshot `df66f54`
+9. `lyre handoff` → produced a complete package with HANDOFF.md, CONTEXT.md, files/, sessions/, timeline.json
+10. `lyre ui` → timeline shows all 7 events with manual/AI badges, chat snippets, links to diffs and full sessions
+11. Search for "fibonacci" → matches the chat thread, highlights the word
+
+Every piece works as designed. The handoff `timeline.json` correctly attributes
+each AI snapshot to a `(session_id, turn_id, user_prompt)` tuple while leaving
+manual snapshots untagged.
+
 ### Things deferred (write down so we don't forget)
 
 - Notebook stripping (jupytext sidecar). Currently `.ipynb` diffs are noisy.
