@@ -422,46 +422,10 @@ type dayGroupVM struct {
 
 // handleTravel renders the time-travel page (slider + state preview).
 func (s *Server) handleTravel(w http.ResponseWriter, r *http.Request) {
-	entries, err := s.store.Log(0)
+	stops, err := s.buildTravelStops()
 	if err != nil {
 		httpErr(w, err)
 		return
-	}
-	// Reverse to oldest-first so the slider's left = past, right = now.
-	stops := make([]travelStopVM, len(entries))
-	for i, e := range entries {
-		idx := len(entries) - 1 - i
-		t, _ := time.Parse(time.RFC3339, e.Date)
-		stops[idx] = travelStopVM{
-			Hash:      e.Hash,
-			ShortHash: e.ShortHash,
-			When:      t,
-			WhenLabel: humanizeAgo(t),
-			DateLabel: t.Format("Jan 2 · 3:04 pm"),
-			Subject:   e.Subject,
-		}
-		// Resolve actor + headline.
-		ev := eventVM{Subject: e.Subject}
-		switch {
-		case strings.HasPrefix(e.Subject, "[ai]"):
-			ev.IsAI = true
-		case strings.HasPrefix(e.Subject, "[lyre]"),
-			strings.HasPrefix(e.Subject, "[safety]"),
-			strings.HasPrefix(e.Subject, "[restore]"),
-			strings.HasPrefix(e.Subject, "[revert]"):
-			ev.IsLyre = true
-		}
-		if sess, _, _ := s.sess.FindByCommit(e.Hash); sess != nil {
-			ev.IsAI = true
-			ev.IsLyre = false
-			ev.Agent = sess.Agent
-		}
-		actor, icon, class := actorFor(ev)
-		stops[idx].Actor = actor
-		stops[idx].ActorIcon = icon
-		stops[idx].ActorClass = class
-		files, _ := s.store.FilesChanged(e.Hash)
-		stops[idx].Headline = renderHeadline(e.Subject, filterDisplayFiles(files), actor)
 	}
 	s.render(w, "travel.html", map[string]any{
 		"Title": "Time travel",
@@ -754,6 +718,7 @@ func (s *Server) handleTimeline(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
+	stops, _ := s.buildTravelStops()
 	s.render(w, "timeline.html", map[string]any{
 		"Title":              "Timeline",
 		"Repo":               s.repo,
@@ -761,9 +726,54 @@ func (s *Server) handleTimeline(w http.ResponseWriter, r *http.Request) {
 		"DayGroups":          groups,
 		"Summary":            summary,
 		"Flash":              flash,
+		"Stops":              stops,
 		"LastUndoableHash":   lastUndoableShort,
 		"LastUndoableHeadline": lastUndoableHeadline,
 	})
+}
+
+// buildTravelStops returns the snapshot list oldest→newest, with the
+// metadata the time-travel scrubber needs to render headlines + actor info.
+func (s *Server) buildTravelStops() ([]travelStopVM, error) {
+	entries, err := s.store.Log(0)
+	if err != nil {
+		return nil, err
+	}
+	stops := make([]travelStopVM, len(entries))
+	for i, e := range entries {
+		idx := len(entries) - 1 - i
+		t, _ := time.Parse(time.RFC3339, e.Date)
+		stops[idx] = travelStopVM{
+			Hash:      e.Hash,
+			ShortHash: e.ShortHash,
+			When:      t,
+			WhenLabel: humanizeAgo(t),
+			DateLabel: t.Format("Jan 2 · 3:04 pm"),
+			Subject:   e.Subject,
+		}
+		ev := eventVM{Subject: e.Subject}
+		switch {
+		case strings.HasPrefix(e.Subject, "[ai]"):
+			ev.IsAI = true
+		case strings.HasPrefix(e.Subject, "[lyre]"),
+			strings.HasPrefix(e.Subject, "[safety]"),
+			strings.HasPrefix(e.Subject, "[restore]"),
+			strings.HasPrefix(e.Subject, "[revert]"):
+			ev.IsLyre = true
+		}
+		if sess, _, _ := s.sess.FindByCommit(e.Hash); sess != nil {
+			ev.IsAI = true
+			ev.IsLyre = false
+			ev.Agent = sess.Agent
+		}
+		actor, icon, class := actorFor(ev)
+		stops[idx].Actor = actor
+		stops[idx].ActorIcon = icon
+		stops[idx].ActorClass = class
+		files, _ := s.store.FilesChanged(e.Hash)
+		stops[idx].Headline = renderHeadline(e.Subject, filterDisplayFiles(files), actor)
+	}
+	return stops, nil
 }
 
 func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {

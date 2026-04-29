@@ -448,6 +448,37 @@ Wrote `BRAINSTORM_VISUAL.md` with six metaphor options sketched. User picked
 So restore is now reachable from every meaningful surface, and the most
 expressive of them (Travel) lets you preview a moment before committing.
 
+### 2026-04-28 — Spine alignment bug + revert inline scrubber
+
+User: "the vertical line and the circle on the chapter is not offset
+properly horizontally — they're off." And after I added an inline travel
+scrubber on the main page: "actually time-travel is not needed in the
+main page. How it was before where we click and go to that page works."
+
+**Spine bug (the real fix)**: a CSS source-order conflict. Two rules for
+`.node-link`:
+```
+.node-link { position: absolute; left: var(--spine-x); ... }   /* line 220 */
+... .node-link, ... { position: relative; z-index: 2; }        /* line 242 */
+```
+The second rule won (later in source order, same specificity), so
+`.node-link` ended up `position: relative`, which made `left: 32px` a
+*relative* offset from natural flow rather than an absolute coordinate.
+The node ended up ~320px off to the right.
+
+Caught it by inspecting `getBoundingClientRect` in the live DOM — node
+center was at 351px while spine line was at 25 + 32 = 57px. Removed
+`.node-link` from the "above the overlay" selector list. Node-link
+doesn't need z-index over the overlay because it has `pointer-events:
+none` anyway — the inner `.node` is non-interactive.
+
+After fix: node center and spine line both at x = 139.5, exactly aligned.
+
+**Inline scrubber reverted**: removed the `<details class="travel-strip">`
+block from the timeline page. The hero "Travel" button still routes to
+the dedicated `/travel` page, which is the affordance the user
+preferred.
+
 ### Things deferred (write down so we don't forget)
 
 - Notebook stripping (jupytext sidecar). Currently `.ipynb` diffs are noisy.

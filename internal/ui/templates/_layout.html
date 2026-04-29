@@ -70,6 +70,7 @@
 
   /* Chapter card — slightly warmer than surface so the "page" reads as paper */
   --chapter-bg: #181a1d;
+  --chapter-hover: #1f2326;
 }
 
 /* Light theme */
@@ -106,6 +107,7 @@
   --avatar-lyre-bg: #d6f5e6;
 
   --chapter-bg: #fdfcf7;  /* warm cream paper */
+  --chapter-hover: #f6f4ec;
 }
 
 /* ─────────────────── Base ─────────────────── */
@@ -197,33 +199,50 @@ details.snap-menu > summary::-webkit-details-marker { display: none; }
 .chapter-num { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-dim); padding: 3px 8px; border: 1px solid var(--border); border-radius: 999px; }
 .chapter-title { margin: 0; font-family: "Georgia", "Iowan Old Style", "Charter", serif; font-size: 22px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
 
-/* The vertical spine inside each chapter */
-.chapter-spine { padding: 12px 24px 18px; position: relative; }
-.chapter-spine::before { content: ""; position: absolute; left: 36px; top: 22px; bottom: 22px; width: 2px; background: var(--border); border-radius: 1px; }
+/* The vertical spine inside each chapter.
+   --spine-x is the X-coordinate (relative to .chapter-spine AND each .story-item
+   inside it) where both the line and every node center MUST sit. We give
+   .chapter-spine zero left/right padding and put the horizontal padding on
+   .story-item instead so both elements share the same coordinate origin. */
+.chapter-spine { --spine-x: 32px; padding: 8px 0 14px 0; position: relative; }
+.chapter-spine::before { content: ""; position: absolute; left: var(--spine-x); top: 18px; bottom: 18px; width: 2px; background: var(--border); border-radius: 1px; transform: translateX(-1px); }
 
-/* Story items hang off the spine */
-.story-item { display: flex; gap: 12px; padding: 12px 0 12px 0; align-items: flex-start; color: var(--text); position: relative; }
+/* Story items hang off the spine. The .node-link is positioned absolutely
+   inside the story-item, with translateX(-50%) so its center is exactly at
+   --spine-x — matching the spine line above. */
+.story-item { display: block; padding: 14px 22px 14px 60px; min-height: 48px; color: var(--text); position: relative; border-radius: var(--radius); transition: background 0.12s ease; }
 .story-item + .story-item { border-top: 1px dashed var(--border-soft); }
-.story-item.story-quiet { padding: 8px 0; opacity: 0.65; }
-.story-item.story-quiet .avatar { width: 22px; height: 22px; }
-.story-item.story-quiet .avatar .icon { width: 12px; height: 12px; }
+.story-item.story-quiet { padding-top: 10px; padding-bottom: 10px; opacity: 0.6; }
+.story-item:hover { background: var(--chapter-hover, var(--surface-2)); }
 
-/* Node = the dot on the spine. Sits left of the avatar. */
-.node-link { display: inline-flex; align-items: center; justify-content: center; width: 14px; flex-shrink: 0; margin-top: 8px; position: relative; z-index: 1; }
-.node { width: 10px; height: 10px; border-radius: 50%; background: var(--surface); border: 2px solid var(--text-dim); transition: transform 0.12s ease, border-color 0.12s ease; }
+/* Node sits EXACTLY on the spine. We use translateX(-50%) so the visual
+   center of the node is at exactly --spine-x, regardless of node width. */
+.node-link { position: absolute; left: var(--spine-x); top: 22px; transform: translateX(-50%); z-index: 2; pointer-events: none; }
+.node { display: block; width: 12px; height: 12px; border-radius: 50%; background: var(--chapter-bg, var(--surface)); border: 2.5px solid var(--text-dim); transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease; box-sizing: border-box; }
 .node-you  { border-color: var(--actor-you); }
 .node-ai   { border-color: var(--actor-ai); }
 .node-lyre { border-color: var(--actor-lyre); }
-.story-item:hover .node { transform: scale(1.25); background: currentColor; }
-.story-item.story-you:hover .node  { color: var(--actor-you); }
-.story-item.story-ai:hover .node   { color: var(--actor-ai); }
-.story-item.story-lyre:hover .node { color: var(--actor-lyre); }
+.story-item:hover .node { transform: scale(1.25); }
+.story-item.story-you:hover .node  { background: var(--actor-you); }
+.story-item.story-ai:hover .node   { background: var(--actor-ai); }
+.story-item.story-lyre:hover .node { background: var(--actor-lyre); }
 
-/* Make the headline area itself a link */
+/* Inner header row: avatar + headline */
+.story-header { display: flex; gap: 12px; align-items: flex-start; }
+.story-item .avatar { margin-top: 1px; }
+.story-item.story-quiet .avatar { width: 22px; height: 22px; }
+.story-item.story-quiet .avatar .icon { width: 12px; height: 12px; }
+.story-item .story-body { flex: 1; min-width: 0; }
+
+/* The whole row is clickable via an overlay <a> that fills the item.
+   Inner links (file pills, "rewind to here", "show conversation") sit on
+   z-index 2 so they remain independently clickable. */
+.story-overlay { position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
+.story-overlay:hover { text-decoration: none; }
+.story-quote, .story-actions, .inline-file, .actor-name { position: relative; z-index: 2; }
+
 .story-link { color: inherit; }
 .story-link:hover { text-decoration: none; }
-.story-link:hover .story-text { color: var(--text); }
-.story-item:hover .actor-name { text-decoration: none; }
 
 /* Show / file detail hero */
 .show-hero { display: flex; align-items: flex-start; gap: 18px; padding-bottom: 18px; margin-bottom: 22px; border-bottom: 1px solid var(--border); }
@@ -247,6 +266,23 @@ details.snap-menu > summary::-webkit-details-marker { display: none; }
 .story-action .icon { width: 13px; height: 13px; }
 .story-action-warn:hover { color: var(--actor-you); }
 .inline-form { display: inline; margin: 0; }
+
+/* Inline travel strip on the main timeline page */
+.travel-strip { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 22px; overflow: hidden; }
+.travel-strip > summary { list-style: none; cursor: pointer; padding: 14px 20px; display: flex; align-items: center; gap: 14px; user-select: none; }
+.travel-strip > summary::-webkit-details-marker { display: none; }
+.travel-strip > summary:hover { background: var(--surface-2); }
+.travel-strip-title { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text); font-size: 14px; }
+.travel-strip-title .icon { color: var(--brand); }
+.travel-strip-hint { flex: 1; min-width: 0; }
+.travel-strip-toggle { opacity: 0.5; }
+.travel-strip[open] .travel-strip-toggle::after { content: " (open)"; }
+.travel-strip-body { padding: 8px 20px 20px; border-top: 1px solid var(--border-soft); }
+.travel-strip-state { margin-top: 14px; }
+.travel-strip-headline { font-weight: 600; font-size: 15px; margin-bottom: 6px; color: var(--text); }
+.travel-strip-files { display: flex; flex-wrap: wrap; gap: 5px 6px; min-height: 28px; }
+.travel-strip-actions { display: flex; gap: 8px; margin-top: 12px; }
+.travel-strip-actions[hidden] { display: none; }
 
 /* Time-travel view */
 .travel-hero { padding: 8px 0 18px; }
