@@ -240,6 +240,55 @@ Result: the same data now reads like a GitHub PR. Tested on:
 - A pure-delete commit (the `[restore] fib.py` undo).
 - The combined diff includes both colors when both exist.
 
+### 2026-04-29 — Modern Flexcompute theme + dark/light toggle + SVG icons
+
+User feedback: "more modern theme with Flexcompute color and option to
+toggle dark and light there. Dark theme should be default. Use nicer
+icons. Imagine you are an expert visual graphics person."
+
+**Brand**: Pulled Flexcompute's primary green from their CSS:
+`--brand-primary: #00643c`. Used that directly for the light theme accent
+and a brighter sibling `#00b870` for dark backgrounds (the literal color
+is too dim against `#0f1113`).
+
+**Theme system**: Built around CSS custom properties. Two themes selected
+via `data-theme="dark"|"light"` on `<html>`. A small inline `<script>` in
+`<head>` reads `localStorage["lyre-theme"]` and sets the attribute *before*
+first paint to avoid the flash-of-wrong-theme. Toggle is a sun/moon button
+in the top bar that writes the new value back to localStorage.
+
+**Icons**: Replaced every emoji (🐦, ✋, 🤖, 📦, etc.) with inline Lucide-style
+SVG icons via a Go `iconHTML(name)` template func. Crisp at any size, line
+style, theme-aware via `currentColor`. Icons used:
+- `bird` for the Lyrebird logo mark
+- `feather` for Lyrebird-actor avatar (system events)
+- `user` for You-actor avatar
+- `sparkles` for Claude-actor avatar
+- `undo`, `plus`, `package` for the action buttons
+- `file`, `chat`, `arrow-right`, `arrow-left` for inline UI
+- `sun`/`moon` for the theme toggle
+- `search` inside the header search box
+
+**Visual hierarchy**:
+- Larger, tighter h2 (28px / -0.02em letter-spacing) for the folder name
+- Slimmer top bar with sticky positioning
+- File pills now circular with the file icon inline
+- Avatars are 32px circles with translucent tinted backgrounds matching
+  each actor's color (warm amber for You, cool blue for Claude, brand
+  green for Lyrebird)
+- "show what changed" links got an arrow-right icon for affordance
+- Subtle dividers (`--border-soft`) between story items inside a day,
+  and stronger dividers (`--border`) between days
+
+**Diff palette**:
+- Dark: `#0d3318` add bg / `#4ec979` add fg, `#3d1418` del bg / `#ef7178`
+  del fg, `#0a2e44` hunk band — all readable but muted enough to not yell
+- Light: kept the GitHub colors (`#e6ffec`/`#1a7f37`, `#ffebe9`/`#cf222e`)
+- Both themes pull from the same set of CSS variables; only the values
+  differ
+
+**Result**: same data, totally different feel. Dark theme is the default.
+
 ### Things deferred (write down so we don't forget)
 
 - Notebook stripping (jupytext sidecar). Currently `.ipynb` diffs are noisy.

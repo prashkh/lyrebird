@@ -6,10 +6,9 @@
       {{if eq .Summary.TotalSnapshots 1}}
         Just started. Edit some files to begin your story.
       {{else if eq .Summary.AISnapshots 0}}
-        {{.Summary.ManualSnapshots}} change{{if ne .Summary.ManualSnapshots 1}}s{{end}}, all yours so far.
-        {{if not .Summary.HasHook}} <a href="/setup-hook" style="font-size:13px;">Capture Claude conversations →</a>{{end}}
+        <span class="num">{{.Summary.ManualSnapshots}}</span> change{{if ne .Summary.ManualSnapshots 1}}s{{end}}, all yours so far.
       {{else}}
-        {{.Summary.AISnapshots}} change{{if ne .Summary.AISnapshots 1}}s{{end}} from Claude · {{.Summary.ManualSnapshots}} from you · across {{.Summary.SessionsCount}} conversation{{if ne .Summary.SessionsCount 1}}s{{end}}.
+        <span class="num">{{.Summary.AISnapshots}}</span> from Claude · <span class="num">{{.Summary.ManualSnapshots}}</span> from you · across <span class="num">{{.Summary.SessionsCount}}</span> conversation{{if ne .Summary.SessionsCount 1}}s{{end}}.
       {{end}}
       {{if .Summary.LastActivity}} <span class="dim">· last change {{.Summary.LastActivity}}</span>{{end}}
     </div>
@@ -19,38 +18,36 @@
     <form method="post" action="/undo" style="display:inline;">
       <button class="btn btn-ghost" type="submit"
               title="Reverts: {{.LastUndoableHeadline}}"
-              onclick="return confirm('Undo: {{.LastUndoableHeadline}}?\n\nThis is reversible — Lyrebird saves a checkpoint before undoing.')">↶ Undo</button>
+              onclick="return confirm('Undo: {{.LastUndoableHeadline}}?\n\nReversible — Lyrebird saves a checkpoint before undoing.')">{{icon "undo"}} Undo</button>
     </form>
     {{end}}
     <details class="snap-menu">
-      <summary class="btn btn-ghost">＋ Save now</summary>
+      <summary class="btn btn-ghost">{{icon "plus"}} Save now</summary>
       <form method="post" action="/snapshot" class="snap-form">
         <input type="text" name="note" placeholder="optional note (e.g. 'before refactor')" maxlength="120">
-        <button class="btn" type="submit">Save</button>
+        <button class="btn btn-primary btn-sm" type="submit">Save</button>
       </form>
     </details>
     <form method="post" action="/handoff" style="display:inline;">
-      <button class="btn btn-primary" type="submit">📦 Hand off</button>
+      <button class="btn btn-primary" type="submit">{{icon "package"}} Hand off</button>
     </form>
   </div>
 </div>
 
 {{if .Flash}}<div class="flash">{{.Flash}}</div>{{end}}
 
-<!-- Files in folder -->
 {{if .Summary.FileList}}
 <div class="filelist-row">
   <span class="dim small">Files in this folder:</span>
-  {{range .Summary.FileList}}<a class="file-chip" href="/file?path={{.}}">{{.}}</a>{{end}}
+  {{range .Summary.FileList}}<a class="file-chip" href="/file?path={{.}}">{{icon "file"}}{{.}}</a>{{end}}
   {{if .Summary.MoreFiles}}<span class="dim small">+{{.Summary.MoreFiles}} more</span>{{end}}
 </div>
 {{end}}
 
-<!-- Story -->
 {{if not .Events}}
   <div class="empty">
     <h3>Nothing's happened yet.</h3>
-    <p>Edit some files in this folder, or run <code>lyre watch</code> in your terminal to track changes automatically.</p>
+    <p class="dim">Edit some files in this folder, or run <code>lyre watch</code> to track changes automatically.</p>
   </div>
 {{else}}
   <div class="story">
@@ -59,8 +56,8 @@
       <div class="day-label">{{.Label}}</div>
       {{range .Events}}
       <div class="story-item story-{{.ActorClass}}{{if .IsLyre}} story-system{{end}}">
-        <div class="story-actor">
-          <span class="avatar">{{.ActorIcon}}</span>
+        <div class="avatar">
+          {{if eq .ActorClass "you"}}{{icon "user"}}{{else if eq .ActorClass "ai"}}{{icon "sparkles"}}{{else}}{{icon "feather"}}{{end}}
         </div>
         <div class="story-body">
           <div class="story-line">
@@ -71,17 +68,17 @@
           {{if .UserPrompt}}
           <a class="prompt-line" href="/sessions/{{.SessionID}}">
             <span class="quote">"{{.UserPrompt | truncate 180}}"</span>
-            <span class="prompt-cta">show conversation →</span>
+            <span class="prompt-cta">{{icon "chat"}} show conversation</span>
           </a>
           {{end}}
           {{if and .Files (not .IsQuiet)}}
           <div class="story-files">
-            {{range $i, $f := .Files}}{{if $i}} {{end}}<a class="file-chip" href="/file?path={{$f}}">{{$f}}</a>{{end}}
+            {{range $i, $f := .Files}}<a class="file-chip" href="/file?path={{$f}}">{{icon "file"}}{{$f}}</a>{{end}}
           </div>
           {{end}}
           {{if not .IsQuiet}}
           <div class="story-meta">
-            <a href="/show/{{.Hash}}">show what changed →</a>
+            <a href="/show/{{.Hash}}">show what changed {{icon "arrow-right"}}</a>
           </div>
           {{end}}
         </div>

@@ -36,6 +36,7 @@ func New(r *config.Repo) (*Server, error) {
 		sess:  session.New(r),
 	}
 	funcs := template.FuncMap{
+		"icon":      iconHTML,
 		"add":       func(a, b int) int { return a + b },
 		"shortHash": func(h string) string {
 			if len(h) > 12 {
