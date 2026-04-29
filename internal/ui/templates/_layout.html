@@ -67,6 +67,9 @@
   --avatar-you-bg:  rgba(245, 185, 66, 0.13);
   --avatar-ai-bg:   rgba(125, 169, 255, 0.13);
   --avatar-lyre-bg: rgba(0, 184, 112, 0.13);
+
+  /* Chapter card — slightly warmer than surface so the "page" reads as paper */
+  --chapter-bg: #181a1d;
 }
 
 /* Light theme */
@@ -101,6 +104,8 @@
   --avatar-you-bg:  #fff7e0;
   --avatar-ai-bg:   #e6efff;
   --avatar-lyre-bg: #d6f5e6;
+
+  --chapter-bg: #fdfcf7;  /* warm cream paper */
 }
 
 /* ─────────────────── Base ─────────────────── */
@@ -184,19 +189,46 @@ details.snap-menu > summary::-webkit-details-marker { display: none; }
 .file-chip:hover { background: var(--surface-3); color: var(--text); border-color: var(--border); text-decoration: none; }
 .file-chip .icon { width: 12px; height: 12px; opacity: 0.6; }
 
-/* ─────────────────── Story view ─────────────────── */
-.day { margin-bottom: 22px; }
-.day-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim); padding: 0 0 8px 0; border-bottom: 1px solid var(--border-soft); margin-bottom: 8px; }
+/* ─────────────────── Story view: chapters + spine ─────────────────── */
 
-.story-item { display: flex; gap: 12px; padding: 10px 12px; border-radius: var(--radius); align-items: flex-start; color: var(--text); position: relative; }
-.story-item:not(.story-quiet):hover { background: var(--surface-2); }
-.story-item.story-quiet { padding: 4px 12px; opacity: 0.55; }
+/* Chapter card — each day is a "page" with a soft warm tone and serif heading */
+.chapter { background: var(--chapter-bg, var(--surface)); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 22px; box-shadow: var(--shadow-sm); overflow: hidden; }
+.chapter-head { padding: 18px 24px 14px; border-bottom: 1px solid var(--border-soft); display: flex; align-items: baseline; gap: 14px; }
+.chapter-num { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-dim); padding: 3px 8px; border: 1px solid var(--border); border-radius: 999px; }
+.chapter-title { margin: 0; font-family: "Georgia", "Iowan Old Style", "Charter", serif; font-size: 22px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+
+/* The vertical spine inside each chapter */
+.chapter-spine { padding: 12px 24px 18px; position: relative; }
+.chapter-spine::before { content: ""; position: absolute; left: 36px; top: 22px; bottom: 22px; width: 2px; background: var(--border); border-radius: 1px; }
+
+/* Story items hang off the spine */
+.story-item { display: flex; gap: 12px; padding: 12px 0 12px 0; align-items: flex-start; color: var(--text); position: relative; }
+.story-item + .story-item { border-top: 1px dashed var(--border-soft); }
+.story-item.story-quiet { padding: 8px 0; opacity: 0.65; }
 .story-item.story-quiet .avatar { width: 22px; height: 22px; }
 .story-item.story-quiet .avatar .icon { width: 12px; height: 12px; }
-.story-detail { position: absolute; top: 10px; right: 12px; display: inline-flex; align-items: center; padding: 4px; color: var(--text-faint); opacity: 0; transition: opacity 0.1s ease; }
-.story-detail .icon { width: 14px; height: 14px; }
-.story-item:hover .story-detail { opacity: 1; color: var(--text-dim); }
-.story-detail:hover { color: var(--text); text-decoration: none; }
+
+/* Node = the dot on the spine. Sits left of the avatar. */
+.node-link { display: inline-flex; align-items: center; justify-content: center; width: 14px; flex-shrink: 0; margin-top: 8px; position: relative; z-index: 1; }
+.node { width: 10px; height: 10px; border-radius: 50%; background: var(--surface); border: 2px solid var(--text-dim); transition: transform 0.12s ease, border-color 0.12s ease; }
+.node-you  { border-color: var(--actor-you); }
+.node-ai   { border-color: var(--actor-ai); }
+.node-lyre { border-color: var(--actor-lyre); }
+.story-item:hover .node { transform: scale(1.25); background: currentColor; }
+.story-item.story-you:hover .node  { color: var(--actor-you); }
+.story-item.story-ai:hover .node   { color: var(--actor-ai); }
+.story-item.story-lyre:hover .node { color: var(--actor-lyre); }
+
+/* Make the headline area itself a link */
+.story-link { color: inherit; }
+.story-link:hover { text-decoration: none; }
+.story-link:hover .story-text { color: var(--text); }
+.story-item:hover .actor-name { text-decoration: none; }
+
+/* Show / file detail hero */
+.show-hero { display: flex; align-items: flex-start; gap: 18px; padding-bottom: 18px; margin-bottom: 22px; border-bottom: 1px solid var(--border); }
+.show-hero-main { flex: 1; min-width: 0; }
+.show-hero-actions { flex-shrink: 0; }
 
 /* File history page */
 .back-link { display: inline-flex; align-items: center; gap: 4px; color: var(--text-dim); font-size: 13px; margin-bottom: 12px; }
@@ -213,7 +245,25 @@ details.snap-menu > summary::-webkit-details-marker { display: none; }
 .story-action { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-dim); background: transparent; border: none; padding: 0; font-family: inherit; cursor: pointer; }
 .story-action:hover { color: var(--text); text-decoration: none; }
 .story-action .icon { width: 13px; height: 13px; }
+.story-action-warn:hover { color: var(--actor-you); }
 .inline-form { display: inline; margin: 0; }
+
+/* Time-travel view */
+.travel-hero { padding: 8px 0 18px; }
+.travel-hero h2 { display: flex; align-items: center; gap: 10px; }
+.travel-scrubber { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 22px 24px; box-shadow: var(--shadow-sm); margin-bottom: 22px; }
+.travel-current { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+.travel-current-meta { color: var(--text-dim); font-size: 13px; margin-bottom: 18px; }
+.travel-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 3px; background: linear-gradient(to right, var(--surface-3), var(--brand) var(--travel-pct, 100%), var(--surface-3) var(--travel-pct, 100%)); outline: none; }
+.travel-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--brand); border: 3px solid var(--surface); box-shadow: 0 2px 8px rgba(0,0,0,0.2); cursor: grab; transition: transform 0.1s; }
+.travel-slider::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.15); }
+.travel-slider::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--brand); border: 3px solid var(--surface); cursor: grab; }
+.travel-axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); margin-top: 8px; padding: 0 4px; }
+.travel-state { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 22px 24px; }
+.travel-state h3 { font-family: "Georgia", serif; font-size: 18px; font-weight: 600; margin: 0 0 10px; }
+.travel-state .filelist-row { padding: 6px 0 0; }
+.travel-state .actions { margin-top: 18px; display: flex; gap: 8px; }
+.travel-empty { color: var(--text-dim); font-size: 13px; padding: 16px 0; }
 
 .avatar { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; flex-shrink: 0; margin-top: 1px; }
 .avatar .icon { width: 14px; height: 14px; }

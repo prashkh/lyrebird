@@ -28,6 +28,7 @@
         <button class="btn btn-primary btn-sm" type="submit">Save</button>
       </form>
     </details>
+    <a class="btn btn-ghost" href="/travel" title="Time travel — drag a slider to see the folder at any past moment">{{icon "clock"}} Travel</a>
     <form method="post" action="/handoff" style="display:inline;">
       <button class="btn btn-primary" type="submit">{{icon "package"}} Hand off</button>
     </form>
@@ -52,27 +53,46 @@
 {{else}}
   <div class="story">
     {{range .DayGroups}}
-    <div class="day">
-      <div class="day-label">{{.Label}}</div>
-      {{range .Events}}
-      <div class="story-item story-{{.ActorClass}}{{if .IsQuiet}} story-quiet{{end}}">
-        <div class="avatar">
-          {{if eq .ActorClass "you"}}{{icon "user"}}{{else if eq .ActorClass "ai"}}{{icon "sparkles"}}{{else}}{{icon "feather"}}{{end}}
-        </div>
-        <div class="story-body">
-          <div class="story-line">
-            <span class="actor-name">{{.Actor}}</span>
-            <span class="story-text">{{.HeadlineHTML}}</span>
-            <span class="when">· {{.Date}}</span>
-            {{if not .IsQuiet}}<a class="story-detail" href="/show/{{.Hash}}">{{icon "arrow-right"}}</a>{{end}}
+    <section class="chapter">
+      <header class="chapter-head">
+        <span class="chapter-num">Chapter {{.Chapter}}</span>
+        <h3 class="chapter-title">{{.Label}}</h3>
+      </header>
+      <div class="chapter-spine">
+        {{range .Events}}
+        <article class="story-item story-{{.ActorClass}}{{if .IsQuiet}} story-quiet{{end}}">
+          <a class="node-link" href="/show/{{.Hash}}" aria-label="show what changed">
+            <span class="node node-{{.ActorClass}}"></span>
+          </a>
+          <div class="avatar">
+            {{if eq .ActorClass "you"}}{{icon "user"}}{{else if eq .ActorClass "ai"}}{{icon "sparkles"}}{{else}}{{icon "feather"}}{{end}}
           </div>
-          {{if .UserPrompt}}
-          <a class="story-quote" href="/sessions/{{.SessionID}}">"{{.UserPrompt | truncate 160}}"</a>
-          {{end}}
-        </div>
+          <div class="story-body">
+            <div class="story-line">
+              <a class="story-link" href="/show/{{.Hash}}">
+                <span class="actor-name">{{.Actor}}</span>
+                <span class="story-text">{{.HeadlineHTML}}</span>
+              </a>
+              <span class="when">· {{.Date}}</span>
+            </div>
+            {{if .UserPrompt}}
+            <a class="story-quote" href="/sessions/{{.SessionID}}">"{{.UserPrompt | truncate 160}}"</a>
+            {{end}}
+            {{if not .IsQuiet}}
+            <div class="story-actions">
+              <a class="story-action" href="/show/{{.Hash}}">{{icon "history"}} show what changed</a>
+              <form method="post" action="/rewind" class="inline-form">
+                <input type="hidden" name="hash" value="{{.Hash}}">
+                <button class="story-action story-action-warn" type="submit"
+                  onclick="return confirm('Rewind the folder back to this point?\n\nReversible — Lyrebird saves a checkpoint first.')">{{icon "undo"}} rewind to here</button>
+              </form>
+            </div>
+            {{end}}
+          </div>
+        </article>
+        {{end}}
       </div>
-      {{end}}
-    </div>
+    </section>
     {{end}}
   </div>
 {{end}}

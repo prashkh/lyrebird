@@ -375,6 +375,79 @@ Same information, half the visual weight, and the filenames are
 themselves clickable. The "show what changed" arrow appears on hover
 instead of always.
 
+### 2026-04-28 — Visual metaphor: book chapters + spine + time travel
+
+User: "the arrow to enter each edit is a bit conspicuous… some buttons to
+restore checkpoint got deleted I think… would be cool to add some
+delightful card mimicking a book being flipped or a scroll bar in timer
+for each action."
+
+Wrote `BRAINSTORM_VISUAL.md` with six metaphor options sketched. User picked
+"go with your recommendation" — the hybrid (B + A + C):
+- Vertical timeline with spine as the foundation (modern, scales)
+- Book chapters at the day level (delightful, easy reading)
+- Time-travel scrubber as a separate view (for moment-grabbing tasks)
+
+**Implementation**:
+
+1. **Chapter cards.** Each day group now renders as a `.chapter` card —
+   slightly warmer surface tone (`--chapter-bg` token: `#181a1d` dark /
+   `#fdfcf7` cream light), soft drop shadow, serif chapter heading
+   ("Chapter N · Yesterday") in Georgia. Chapter numbers count from
+   oldest (= Chapter 1) up to newest, so the "story so far" reads
+   naturally as a numbered sequence.
+
+2. **Vertical spine.** Inside each chapter, a 2px vertical line runs down
+   the left edge. Each story item gets a `.node` — a small ring colored
+   to the actor (amber=You, blue=Claude, green=Lyrebird) — sitting on the
+   spine. On hover the node scales 1.25× and fills with the actor color,
+   creating a satisfying "moment lights up" feedback.
+
+3. **Always-visible quiet actions** replace the hover-only arrow.
+   Each story row now has two text-buttons under the headline:
+   `↺ show what changed` and `↶ rewind to here`. Both are quiet by
+   default (text-dim color, no chrome) and pop on hover. The "rewind"
+   one tints amber on hover to signal a state-changing action.
+
+4. **`/rewind` endpoint.** New POST handler that auto-snapshots the
+   current state, then reverts the work tree to a given hash, then
+   commits the revert as `[revert] folder rewound to <short>`. Reversible
+   like all destructive ops in Lyre.
+
+5. **`Bring folder back to this state` on the snapshot detail page.**
+   Primary action top-right of the show hero — closes the loop where
+   you've drilled in to "what changed" and then want to actually rewind.
+
+6. **Time-travel page (`/travel`).** Server emits the full event list
+   oldest→newest as a JS array. A `<input type=range>` slider scrubs
+   through it; on every `input` event the page fetches `/travel/state?hash=…`
+   which returns the file list at that snapshot (via `git ls-tree -r
+   --name-only <ref>`). The hero updates with "Actor · Headline" and
+   "n hours ago · Apr 28 · 10:17 pm". A primary "Bring the folder back
+   to this state" button on the same page makes the travel→restore loop
+   one click.
+
+   Slider styling uses a CSS custom property `--travel-pct` that the JS
+   updates to render a green progress fill from start → thumb position.
+   Shows "n hours ago" / "now" axis labels.
+
+7. **Honest filename pills inline in the headline** (from pass 2) work
+   even better in the new layout — they read as natural typography
+   embedded in the chapter prose.
+
+**The rewind UX path is now**:
+
+| Where you are | How to rewind |
+|---|---|
+| Timeline (any event) | "↶ rewind to here" button on the event |
+| Show page (snapshot detail) | "Bring folder back to this state" header button |
+| File history | "Bring back this version" per-version button |
+| Anywhere | "Travel" → drag slider → "Bring the folder back to this state" |
+| Hero | "Undo" rolls back the most recent non-system change |
+
+So restore is now reachable from every meaningful surface, and the most
+expressive of them (Travel) lets you preview a moment before committing.
+
 ### Things deferred (write down so we don't forget)
 
 - Notebook stripping (jupytext sidecar). Currently `.ipynb` diffs are noisy.

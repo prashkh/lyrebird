@@ -3,6 +3,7 @@ package ui
 
 import (
 	"embed"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -38,6 +39,7 @@ func New(r *config.Repo) (*Server, error) {
 	funcs := template.FuncMap{
 		"icon":      iconHTML,
 		"add":       func(a, b int) int { return a + b },
+		"sub":       func(a, b int) int { return a - b },
 		"shortHash": func(h string) string {
 			if len(h) > 12 {
 				return h[:12]
@@ -77,9 +79,44 @@ func (s *Server) Routes() *http.ServeMux {
 	mux.HandleFunc("/search", s.handleSearch)
 	mux.HandleFunc("/handoff", s.handleHandoff)
 	mux.HandleFunc("/restore", s.handleRestore)
+	mux.HandleFunc("/rewind", s.handleRewind)
 	mux.HandleFunc("/undo", s.handleUndo)
 	mux.HandleFunc("/snapshot", s.handleSnapshot)
+	mux.HandleFunc("/travel", s.handleTravel)
+	mux.HandleFunc("/travel/state", s.handleTravelState)
 	return mux
+}
+
+// handleRewind reverts the entire folder to the state captured at <hash>.
+// Auto-snapshots first so the rewind is itself reversible.
+func (s *Server) handleRewind(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST required", http.StatusMethodNotAllowed)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		httpErr(w, err)
+		return
+	}
+	hash := r.FormValue("hash")
+	if hash == "" {
+		http.Error(w, "missing hash", http.StatusBadRequest)
+		return
+	}
+	if _, err := s.store.Snapshot("[safety] before rewind to " + hash); err != nil {
+		httpErr(w, err)
+		return
+	}
+	if err := s.store.Revert(hash); err != nil {
+		httpErr(w, err)
+		return
+	}
+	_, _ = s.store.Snapshot("[revert] folder rewound to " + hash[:8])
+	short := hash
+	if len(short) > 8 {
+		short = short[:8]
+	}
+	http.Redirect(w, r, "/?flash="+template.URLQueryEscaper("Folder rewound to "+short+". The previous state is saved — you can rewind back."), http.StatusFound)
 }
 
 // handleUndo rolls the folder back to the state BEFORE the most recent
@@ -351,7 +388,9 @@ func dayBucket(t time.Time) string {
 	}
 }
 
-// groupEventsByDay turns a flat newest-first event list into day-bucketed groups.
+// groupEventsByDay turns a flat newest-first event list into day-bucketed
+// "chapter" groups. The newest day gets the highest chapter number;
+// oldest day = Chapter 1 (so the story reads bottom-up like a book).
 func groupEventsByDay(events []eventVM) []dayGroupVM {
 	var groups []dayGroupVM
 	for _, ev := range events {
@@ -364,13 +403,110 @@ func groupEventsByDay(events []eventVM) []dayGroupVM {
 		}
 		groups[len(groups)-1].Events = append(groups[len(groups)-1].Events, ev)
 	}
+	// Number chapters: newest (top) = total, oldest (bottom) = 1.
+	total := len(groups)
+	for i := range groups {
+		groups[i].Chapter = total - i
+	}
 	return groups
 }
 
 // dayGroupVM groups events under a day header for the story view.
 type dayGroupVM struct {
-	Label  string
-	Events []eventVM
+	Label   string
+	Chapter int
+	Events  []eventVM
+}
+
+// ─────────────────────────── Time-travel view ───────────────────────────
+
+// handleTravel renders the time-travel page (slider + state preview).
+func (s *Server) handleTravel(w http.ResponseWriter, r *http.Request) {
+	entries, err := s.store.Log(0)
+	if err != nil {
+		httpErr(w, err)
+		return
+	}
+	// Reverse to oldest-first so the slider's left = past, right = now.
+	stops := make([]travelStopVM, len(entries))
+	for i, e := range entries {
+		idx := len(entries) - 1 - i
+		t, _ := time.Parse(time.RFC3339, e.Date)
+		stops[idx] = travelStopVM{
+			Hash:      e.Hash,
+			ShortHash: e.ShortHash,
+			When:      t,
+			WhenLabel: humanizeAgo(t),
+			DateLabel: t.Format("Jan 2 · 3:04 pm"),
+			Subject:   e.Subject,
+		}
+		// Resolve actor + headline.
+		ev := eventVM{Subject: e.Subject}
+		switch {
+		case strings.HasPrefix(e.Subject, "[ai]"):
+			ev.IsAI = true
+		case strings.HasPrefix(e.Subject, "[lyre]"),
+			strings.HasPrefix(e.Subject, "[safety]"),
+			strings.HasPrefix(e.Subject, "[restore]"),
+			strings.HasPrefix(e.Subject, "[revert]"):
+			ev.IsLyre = true
+		}
+		if sess, _, _ := s.sess.FindByCommit(e.Hash); sess != nil {
+			ev.IsAI = true
+			ev.IsLyre = false
+			ev.Agent = sess.Agent
+		}
+		actor, icon, class := actorFor(ev)
+		stops[idx].Actor = actor
+		stops[idx].ActorIcon = icon
+		stops[idx].ActorClass = class
+		files, _ := s.store.FilesChanged(e.Hash)
+		stops[idx].Headline = renderHeadline(e.Subject, filterDisplayFiles(files), actor)
+	}
+	s.render(w, "travel.html", map[string]any{
+		"Title": "Time travel",
+		"Stops": stops,
+		"Repo":  s.repo,
+	})
+}
+
+// handleTravelState returns a JSON state snapshot at a given hash:
+// file list and a few details. Called by the slider via fetch.
+func (s *Server) handleTravelState(w http.ResponseWriter, r *http.Request) {
+	hash := r.URL.Query().Get("hash")
+	if hash == "" {
+		http.Error(w, "missing hash", http.StatusBadRequest)
+		return
+	}
+	files, err := s.store.LsFilesAt(hash)
+	if err != nil {
+		httpErr(w, err)
+		return
+	}
+	files = filterDisplayFiles(files)
+	w.Header().Set("Content-Type", "application/json")
+	enc := jsonEncoder(w)
+	_ = enc.Encode(map[string]any{
+		"hash":  hash,
+		"files": files,
+	})
+}
+
+type travelStopVM struct {
+	Hash       string
+	ShortHash  string
+	When       time.Time
+	WhenLabel  string
+	DateLabel  string
+	Subject    string
+	Headline   string
+	Actor      string
+	ActorIcon  string
+	ActorClass string
+}
+
+func jsonEncoder(w http.ResponseWriter) *json.Encoder {
+	return json.NewEncoder(w)
 }
 
 // filterDisplayFiles drops paths that are obvious editor artifacts or

@@ -1,0 +1,88 @@
+{{define "content"}}
+<a href="/" class="back-link">{{icon "arrow-left"}} Back to story</a>
+
+<div class="travel-hero">
+  <h2>{{icon "clock"}} Time travel</h2>
+  <div class="subtitle dim">Drag the slider to move through the folder's history. Pick a moment, then bring the folder back to that state.</div>
+</div>
+
+{{if not .Stops}}
+<div class="empty"><h3>No history yet.</h3><p class="dim">Once you make some changes, you can travel through them here.</p></div>
+{{else}}
+<div class="travel-scrubber">
+  <div class="travel-current" id="travel-headline">— pick a moment —</div>
+  <div class="travel-current-meta" id="travel-meta">&nbsp;</div>
+  <input type="range" class="travel-slider" id="travel-slider"
+         min="0" max="{{sub (len .Stops) 1}}" step="1" value="{{sub (len .Stops) 1}}"
+         aria-label="Time slider">
+  <div class="travel-axis">
+    <span>{{(index .Stops 0).WhenLabel}}</span>
+    <span>now</span>
+  </div>
+</div>
+
+<div class="travel-state">
+  <h3>The folder at this moment</h3>
+  <div class="travel-empty" id="travel-files-empty" hidden>Empty folder.</div>
+  <div class="filelist-row" id="travel-files"></div>
+  <div class="actions">
+    <form method="post" action="/rewind" id="travel-form">
+      <input type="hidden" name="hash" id="travel-hash">
+      <button class="btn btn-primary" type="submit"
+        onclick="return confirm('Bring the folder back to this state?\n\nReversible — Lyrebird saves a checkpoint first.')">
+        {{icon "undo"}} Bring the folder back to this state
+      </button>
+    </form>
+    <a class="btn btn-ghost" href="#" id="travel-show">{{icon "history"}} See what changed</a>
+  </div>
+</div>
+
+<script>
+(function () {
+  // Server-supplied stops, oldest → newest.
+  var stops = [
+    {{range .Stops}}{ hash: {{.Hash | js}}, short: {{.ShortHash | js}}, when: {{.WhenLabel | js}}, date: {{.DateLabel | js}}, headline: {{.Headline | js}}, actor: {{.Actor | js}}, actorClass: {{.ActorClass | js}} },
+    {{end}}
+  ];
+  var slider = document.getElementById('travel-slider');
+  var headline = document.getElementById('travel-headline');
+  var meta = document.getElementById('travel-meta');
+  var filesEl = document.getElementById('travel-files');
+  var emptyEl = document.getElementById('travel-files-empty');
+  var hashEl = document.getElementById('travel-hash');
+  var showLink = document.getElementById('travel-show');
+
+  function setStop(i) {
+    var s = stops[i];
+    if (!s) return;
+    headline.textContent = s.actor + ' · ' + s.headline;
+    meta.textContent = s.when + ' · ' + s.date;
+    hashEl.value = s.hash;
+    showLink.href = '/show/' + s.hash;
+    var pct = stops.length <= 1 ? 100 : (i / (stops.length - 1)) * 100;
+    slider.style.setProperty('--travel-pct', pct + '%');
+    fetch('/travel/state?hash=' + encodeURIComponent(s.hash))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        filesEl.innerHTML = '';
+        if (!data.files || !data.files.length) {
+          emptyEl.hidden = false;
+          return;
+        }
+        emptyEl.hidden = true;
+        data.files.forEach(function (f) {
+          var a = document.createElement('a');
+          a.className = 'file-chip';
+          a.href = '/file?path=' + encodeURIComponent(f);
+          a.textContent = f;
+          filesEl.appendChild(a);
+        });
+      })
+      .catch(function () { emptyEl.hidden = false; emptyEl.textContent = '(could not load file list)'; });
+  }
+  slider.addEventListener('input', function () { setStop(parseInt(slider.value, 10)); });
+  setStop(parseInt(slider.value, 10));
+})();
+</script>
+{{end}}
+{{end}}

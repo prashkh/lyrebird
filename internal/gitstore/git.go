@@ -249,7 +249,12 @@ func (s *Store) HasCommits() bool {
 
 // LsFiles returns the list of files tracked at HEAD (paths relative to repo root).
 func (s *Store) LsFiles() ([]string, error) {
-	out, err := s.run("ls-tree", "-r", "--name-only", "HEAD")
+	return s.LsFilesAt("HEAD")
+}
+
+// LsFilesAt returns files tracked at a given ref/hash.
+func (s *Store) LsFilesAt(ref string) ([]string, error) {
+	out, err := s.run("ls-tree", "-r", "--name-only", ref)
 	if err != nil {
 		return nil, err
 	}
