@@ -479,6 +479,39 @@ block from the timeline page. The hero "Travel" button still routes to
 the dedicated `/travel` page, which is the affordance the user
 preferred.
 
+### 2026-04-29 — Folder tree (kept) + 8-bit travel page (reverted)
+
+User asked for both at the same time:
+1. "show the folder hierarchy in the timeline view, ASCII or tree view"
+2. "on the time travel page we could try 8-bit type design?"
+
+I built both. Then user said: "okay I don't like this new visual for time
+travel. Revert to the original."
+
+**Kept**: the folder tree.
+- `internal/ui/tree.go` — turns a flat path list into a nested
+  `FileNode` (directories sorted before files, alphabetical), with two
+  renderers: `RenderTreeHTML` (HTML for the regular UI) and
+  `RenderTreeASCII` (box-drawing art, kept for any future use).
+- Timeline hero — flat chip row replaced with a collapsible
+  `<details class="tree-panel">` showing "N files in this folder" and a
+  proper indented tree with folder/file glyphs. Folders are bold with a
+  brand-green ▸; files are dim monospace, clickable, with a hover tint.
+
+**Reverted**: the 8-bit travel page.
+- Original modern card design is back: green-fill scrubber, "The folder
+  at this moment" card with serif heading, regular green-primary
+  `Bring the folder back to this state` button.
+- Files at the scrubbed moment are now rendered as the SAME HTML tree
+  used on the timeline (rebuilt client-side from the JSON file list)
+  instead of flat chips — the tree is genuinely more useful for nested
+  folders, and the user wanted it.
+
+What I learned: the 8-bit page was visually striking but tonally wrong
+for a "serious" tracking tool. The tree-on-travel-page idea survives
+the revert because it's a useful info-architecture change, not a
+stylistic flourish.
+
 ### Things deferred (write down so we don't forget)
 
 - Notebook stripping (jupytext sidecar). Currently `.ipynb` diffs are noisy.

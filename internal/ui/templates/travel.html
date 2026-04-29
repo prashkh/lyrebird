@@ -24,7 +24,7 @@
 <div class="travel-state">
   <h3>The folder at this moment</h3>
   <div class="travel-empty" id="travel-files-empty" hidden>Empty folder.</div>
-  <div class="filelist-row" id="travel-files"></div>
+  <div id="travel-tree-host"></div>
   <div class="actions">
     <form method="post" action="/rewind" id="travel-form">
       <input type="hidden" name="hash" id="travel-hash">
@@ -39,7 +39,6 @@
 
 <script>
 (function () {
-  // Server-supplied stops, oldest → newest.
   var stops = [
     {{range .Stops}}{ hash: {{.Hash | js}}, short: {{.ShortHash | js}}, when: {{.WhenLabel | js}}, date: {{.DateLabel | js}}, headline: {{.Headline | js}}, actor: {{.Actor | js}}, actorClass: {{.ActorClass | js}} },
     {{end}}
@@ -47,10 +46,50 @@
   var slider = document.getElementById('travel-slider');
   var headline = document.getElementById('travel-headline');
   var meta = document.getElementById('travel-meta');
-  var filesEl = document.getElementById('travel-files');
+  var treeHost = document.getElementById('travel-tree-host');
   var emptyEl = document.getElementById('travel-files-empty');
   var hashEl = document.getElementById('travel-hash');
   var showLink = document.getElementById('travel-show');
+
+  // Render a flat list as a nested tree.
+  function renderTree(paths) {
+    var root = { name: '', isDir: true, children: [], path: '' };
+    paths.forEach(function (p) {
+      var parts = p.split('/');
+      var cur = root;
+      parts.forEach(function (part, i) {
+        var isLeaf = i === parts.length - 1;
+        var child = cur.children.find(function (c) { return c.name === part; });
+        if (!child) {
+          child = { name: part, isDir: !isLeaf, children: [], path: parts.slice(0, i + 1).join('/') };
+          cur.children.push(child);
+        }
+        cur = child;
+      });
+    });
+    function sortNode(n) {
+      n.children.sort(function (a, b) {
+        if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
+        return a.name < b.name ? -1 : 1;
+      });
+      n.children.forEach(sortNode);
+    }
+    sortNode(root);
+    function nodeHTML(n) {
+      if (n.isDir) {
+        var html = '<li class="tree-node tree-dir"><span class="tree-row tree-row-dir"><span class="tree-glyph">▸</span><span class="tree-name">' + escape(n.name) + '/</span></span>';
+        if (n.children.length) {
+          html += '<ul class="tree-list">';
+          html += n.children.map(nodeHTML).join('');
+          html += '</ul>';
+        }
+        return html + '</li>';
+      }
+      return '<li class="tree-node tree-file"><a class="tree-row tree-row-file" href="/file?path=' + encodeURIComponent(n.path) + '"><span class="tree-glyph">·</span><span class="tree-name">' + escape(n.name) + '</span></a></li>';
+    }
+    function escape(s) { return s.replace(/[&<>"']/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+    return '<ul class="tree-list">' + root.children.map(nodeHTML).join('') + '</ul>';
+  }
 
   function setStop(i) {
     var s = stops[i];
@@ -61,22 +100,17 @@
     showLink.href = '/show/' + s.hash;
     var pct = stops.length <= 1 ? 100 : (i / (stops.length - 1)) * 100;
     slider.style.setProperty('--travel-pct', pct + '%');
+    treeHost.innerHTML = '';
     fetch('/travel/state?hash=' + encodeURIComponent(s.hash))
       .then(function (r) { return r.json(); })
       .then(function (data) {
-        filesEl.innerHTML = '';
         if (!data.files || !data.files.length) {
           emptyEl.hidden = false;
+          treeHost.innerHTML = '';
           return;
         }
         emptyEl.hidden = true;
-        data.files.forEach(function (f) {
-          var a = document.createElement('a');
-          a.className = 'file-chip';
-          a.href = '/file?path=' + encodeURIComponent(f);
-          a.textContent = f;
-          filesEl.appendChild(a);
-        });
+        treeHost.innerHTML = renderTree(data.files);
       })
       .catch(function () { emptyEl.hidden = false; emptyEl.textContent = '(could not load file list)'; });
   }

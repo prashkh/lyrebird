@@ -191,6 +191,27 @@ details.snap-menu > summary::-webkit-details-marker { display: none; }
 .file-chip:hover { background: var(--surface-3); color: var(--text); border-color: var(--border); text-decoration: none; }
 .file-chip .icon { width: 12px; height: 12px; opacity: 0.6; }
 
+/* ─────────────────── Folder tree (timeline hero) ─────────────────── */
+.tree-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 22px; overflow: hidden; }
+.tree-panel > summary { list-style: none; cursor: pointer; padding: 10px 16px; display: flex; align-items: center; gap: 10px; user-select: none; }
+.tree-panel > summary::-webkit-details-marker { display: none; }
+.tree-panel > summary:hover { background: var(--surface-2); }
+.tree-summary-label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text); }
+.tree-summary-label .icon { color: var(--brand); width: 14px; height: 14px; }
+.tree-summary-toggle { margin-left: auto; }
+.tree-panel[open] .tree-summary-toggle::after { content: " ▾"; }
+.tree-panel:not([open]) .tree-summary-toggle::after { content: " ▸"; }
+.tree-body { padding: 6px 18px 12px 18px; border-top: 1px solid var(--border-soft); }
+.tree-list { list-style: none; padding-left: 0; margin: 0; font-family: var(--font-mono); font-size: 12.5px; }
+.tree-list .tree-list { padding-left: 18px; border-left: 1px dashed var(--border-soft); margin-left: 6px; }
+.tree-node { padding: 0; }
+.tree-row { display: inline-flex; align-items: center; gap: 6px; padding: 2px 0; color: var(--text); }
+.tree-row-file { color: var(--text-2); border-radius: 3px; padding: 2px 6px; transition: background 0.1s ease; }
+.tree-row-file:hover { background: var(--surface-2); color: var(--text); text-decoration: none; }
+.tree-row-dir { color: var(--text); font-weight: 600; }
+.tree-glyph { color: var(--text-faint); width: 12px; text-align: center; font-size: 11px; }
+.tree-row-dir .tree-glyph { color: var(--brand); }
+
 /* ─────────────────── Story view: chapters + spine ─────────────────── */
 
 /* Chapter card — each day is a "page" with a soft warm tone and serif heading */

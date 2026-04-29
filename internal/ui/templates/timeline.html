@@ -37,12 +37,16 @@
 
 {{if .Flash}}<div class="flash">{{.Flash}}</div>{{end}}
 
-{{if .Summary.FileList}}
-<div class="filelist-row">
-  <span class="dim small">Files in this folder:</span>
-  {{range .Summary.FileList}}<a class="file-chip" href="/file?path={{.}}">{{icon "file"}}{{.}}</a>{{end}}
-  {{if .Summary.MoreFiles}}<span class="dim small">+{{.Summary.MoreFiles}} more</span>{{end}}
-</div>
+{{if .Summary.FileTree}}
+<details class="tree-panel">
+  <summary>
+    <span class="tree-summary-label">{{icon "folder"}} {{.Summary.FilesCount}} file{{if ne .Summary.FilesCount 1}}s{{end}} in this folder</span>
+    <span class="tree-summary-toggle dim small">show / hide</span>
+  </summary>
+  <div class="tree-body">
+    {{.Summary.FileTree}}
+  </div>
+</details>
 {{end}}
 
 

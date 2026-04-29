@@ -224,7 +224,8 @@ type summaryVM struct {
 	ManualSnapshots int
 	SessionsCount  int
 	FilesCount     int
-	FileList       []string  // up to ~12 names
+	FileList       []string  // up to ~12 names (legacy flat fallback)
+	FileTree       template.HTML // rendered HTML tree
 	MoreFiles      int
 	LastActivity   string    // human-friendly
 	LastAISession  *session.Session
@@ -434,8 +435,8 @@ func (s *Server) handleTravel(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleTravelState returns a JSON state snapshot at a given hash:
-// file list and a few details. Called by the slider via fetch.
+// handleTravelState returns the folder state at <hash>. Default response is
+// JSON; ?format=ascii returns a box-drawing tree (used by the 8-bit page).
 func (s *Server) handleTravelState(w http.ResponseWriter, r *http.Request) {
 	hash := r.URL.Query().Get("hash")
 	if hash == "" {
@@ -448,6 +449,11 @@ func (s *Server) handleTravelState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	files = filterDisplayFiles(files)
+	if r.URL.Query().Get("format") == "ascii" {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = w.Write([]byte(RenderTreeASCII(BuildTree(files))))
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	enc := jsonEncoder(w)
 	_ = enc.Encode(map[string]any{
@@ -634,6 +640,7 @@ func (s *Server) buildSummary() (*summaryVM, error) {
 		} else {
 			sm.FileList = filtered
 		}
+		sm.FileTree = RenderTreeHTML(BuildTree(filtered))
 	}
 	// Detect whether the Claude Code hook is installed.
 	sm.HasHook = isHookInstalled()
